@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>HeatVision — Urban Heat Island Mapper</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#080b12;--bg2:#0d121c;--bg3:#131a26;--bg4:#1a2332;--border:#1e2a3d;--text:#e2e8f0;--muted:#64748b;--accent:#f0883e;--accent2:#e94560;--success:#22c55e;--blue:#3b82f6;--glass:rgba(13,18,28,0.85);--radius:10px;--shadow:0 8px 32px rgba(0,0,0,0.4)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+::selection{background:rgba(240,136,62,0.3)}
+
+/* ─── SPLASH ─── */
+#splash{position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s ease}
+#splash.hidden{opacity:0;pointer-events:none}
+#splash::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(233,69,96,.04),transparent 60%),radial-gradient(ellipse at 50% 60%,rgba(240,136,62,.025),transparent 60%);animation:ambientHeat 5s ease-in-out infinite alternate}
+@keyframes ambientHeat{0%{opacity:.3;transform:scale(1)}50%{opacity:.7;transform:scale(1.05)}100%{opacity:.4;transform:scale(.95)}}
+
+#splash-inner{position:relative;display:flex;flex-direction:column;align-items:center;gap:16px}
+
+#splash-glow{position:absolute;top:50%;left:50%;width:320px;height:320px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(233,69,96,.15),rgba(240,136,62,.05) 50%,transparent 70%);animation:ringExpand 2.5s ease-out forwards;pointer-events:none}
+@keyframes ringExpand{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}30%{opacity:1}100%{transform:translate(-50%,-50%) scale(1.8);opacity:.4}}
+
+#splash-heat-ring{position:absolute;top:50%;left:50%;width:160px;height:160px;transform:translate(-50%,-50%);border-radius:50%;border:2px solid rgba(233,69,96,.4);box-shadow:0 0 20px rgba(233,69,96,.2),inset 0 0 20px rgba(233,69,96,.1);animation:heatRing 3s ease-in-out infinite;pointer-events:none}
+@keyframes heatRing{0%{transform:translate(-50%,-50%) scale(.6);opacity:0}20%{opacity:1}80%{opacity:.3}100%{transform:translate(-50%,-50%) scale(2.2);opacity:0}}
+
+#splash-heat-ring2{position:absolute;top:50%;left:50%;width:160px;height:160px;transform:translate(-50%,-50%);border-radius:50%;border:2px solid rgba(240,136,62,.3);box-shadow:0 0 20px rgba(240,136,62,.15),inset 0 0 20px rgba(240,136,62,.08);animation:heatRing2 3s ease-in-out .8s infinite;pointer-events:none}
+@keyframes heatRing2{0%{transform:translate(-50%,-50%) scale(.4);opacity:0}20%{opacity:1}80%{opacity:.2}100%{transform:translate(-50%,-50%) scale(2.5);opacity:0}}
+
+#splash-particles{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.splash-particle{position:absolute;bottom:-10px;width:2px;height:2px;border-radius:50%;background:rgba(233,69,96,.4);animation:particleRise linear infinite}
+@keyframes particleRise{0%{transform:translateY(0) scale(1);opacity:0}10%{opacity:1}90%{opacity:.4}100%{transform:translateY(-100vh) scale(0);opacity:0}}
+
+#splash-logo{font-size:clamp(36px,7vw,72px);font-weight:800;letter-spacing:3px;opacity:0;animation:logoReveal 1.8s cubic-bezier(.16,1,.3,1) forwards;background:linear-gradient(135deg,#f0883e 0%,#e94560 40%,#ff6b6b 70%,#f0883e 100%);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;position:relative;z-index:1;animation:logoReveal 1.8s cubic-bezier(.16,1,.3,1) forwards,shimmer 4s ease-in-out 1.8s infinite}
+@keyframes logoReveal{0%{opacity:0;transform:scale(.7) translateY(20px);filter:blur(8px)}50%{opacity:1;filter:blur(0)}100%{opacity:1;transform:scale(1) translateY(0);filter:blur(0)}}
+@keyframes shimmer{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+#splash-sub{font-size:clamp(10px,1.2vw,14px);color:rgba(255,255,255,.25);letter-spacing:6px;font-weight:200;text-transform:uppercase;opacity:0;animation:subFade 1s ease 1s forwards;position:relative;z-index:1}
+@keyframes subFade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+#splash-loader{position:absolute;bottom:30vh;width:160px;height:2px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden;opacity:0;animation:fadeInLoader 1s ease 2s forwards}
+@keyframes fadeInLoader{to{opacity:1}}
+#splash-loader .fill{height:100%;width:0%;background:linear-gradient(90deg,transparent,var(--accent) 30%,var(--accent2) 70%,transparent);background-size:200% 100%;border-radius:4px;animation:loadBar 1.5s cubic-bezier(.16,1,.3,1) 2s forwards,barShimmer 1s linear 2s infinite}
+@keyframes loadBar{from{width:0%}to{width:100%}}
+@keyframes barShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ─── GLOBE ─── */
+#globe-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.35;transition:opacity .8s ease}
+
+/* ─── TOP BAR ─── */
+#top-bar{position:fixed;top:0;left:0;right:0;z-index:1000;padding:10px 16px;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,rgba(8,11,18,.97) 60%,transparent);transition:transform .35s cubic-bezier(.16,1,.3,1)}
+#top-bar.hidden{transform:translateY(-100%)}
+.logo-wrap{display:flex;align-items:center;gap:8px;text-decoration:none}
+.logo-icon{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(233,69,96,.3)}
+.logo-label{font-size:15px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap}
+#city-select{background:var(--bg3);color:var(--text);border:1px solid var(--border);padding:6px 28px 6px 12px;border-radius:8px;font-size:12px;cursor:pointer;appearance:none;min-width:110px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8.5L1.5 4h9z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;transition:border-color .2s}
+#city-select:focus{outline:none;border-color:var(--accent)}
+#search-wrap{position:relative;flex:1;max-width:280px;min-width:100px}
+#search-input{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 12px 6px 32px;border-radius:8px;font-size:12px;outline:none;transition:border-color .2s}
+#search-input:focus{border-color:var(--accent)}
+#search-input::placeholder{color:var(--muted);opacity:.5}
+.si{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;pointer-events:none;opacity:.4}
+#search-results{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:9999;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);max-height:240px;overflow-y:auto;display:none;box-shadow:var(--shadow);animation:slideDown .2s ease}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+#search-results .r{padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);transition:background .15s}
+#search-results .r:last-child{border-bottom:none}
+#search-results .r:hover{background:var(--bg4)}
+#search-results .r .s{font-size:10px;color:var(--muted)}
+.top-actions{display:flex;gap:6px;margin-left:auto;align-items:center}
+.top-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:11px;transition:all .2s;white-space:nowrap;display:flex;align-items:center;gap:6px;font-weight:500}
+.top-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--muted)}
+.top-btn.primary{background:linear-gradient(135deg,var(--accent2),#d63850);border-color:var(--accent2);color:#fff;box-shadow:0 2px 8px rgba(233,69,96,.2)}
+.top-btn.primary:hover{box-shadow:0 4px 16px rgba(233,69,96,.3);transform:translateY(-1px)}
+.top-btn.primary.active{background:linear-gradient(135deg,var(--success),#16a34a);border-color:var(--success);box-shadow:0 2px 8px rgba(34,197,94,.2)}
+.top-btn-icon{padding:6px 10px;font-size:15px;line-height:1}
+.top-badge{position:relative}
+.top-badge::after{content:'';position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ─── MAP ─── */
+#map-wrap{height:100vh;width:100vw;position:relative;z-index:1}
+#map{height:100%;width:100%}
+#draw-hint{position:absolute;top:70px;left:50%;transform:translateX(-50%);z-index:500;background:var(--glass);padding:10px 20px;border-radius:var(--radius);border:1px solid var(--accent);font-size:12px;display:none;align-items:center;gap:10px;box-shadow:var(--shadow);white-space:nowrap;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);animation:slideDown .3s ease}
+#draw-hint .k{background:var(--bg4);padding:2px 6px;border-radius:4px;font-size:10px;font-family:monospace;color:var(--muted)}
+.leaflet-draw.leaflet-control{margin-top:60px}
+.leaflet-popup-content-wrapper{border-radius:var(--radius);background:var(--glass);color:var(--text);box-shadow:var(--shadow);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border)}
+.leaflet-popup-tip{background:var(--bg2)}
+.leaflet-popup-content{margin:12px 16px;font-size:12px;line-height:1.6}
+.leaflet-popup-content h3{margin-bottom:6px;color:var(--accent);font-size:14px;font-weight:600}
+.popup-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
+.popup-badge.high{background:rgba(233,69,96,.2);color:#ff6b6b}
+.popup-badge.medium{background:rgba(240,136,62,.2);color:var(--accent)}
+.popup-badge.low{background:rgba(34,197,94,.2);color:var(--success)}
+.leaflet-control-zoom a{background:var(--bg3)!important;color:var(--text)!important;border-color:var(--border)!important}
+.leaflet-control-zoom a:hover{background:var(--bg4)!important}
+
+/* ─── SIDE PANEL ─── */
+#panel-toggle{position:fixed;right:10px;top:62px;z-index:901;background:var(--glass);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:14px;transition:right .4s cubic-bezier(.16,1,.3,1),background .2s;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+#panel-toggle:hover{background:var(--bg4)}
+#panel-toggle.open{right:356px}
+#sheet{position:fixed;right:0;top:0;bottom:0;z-index:900;width:350px;background:var(--glass);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .4s cubic-bezier(.16,1,.3,1);box-shadow:-8px 0 40px rgba(0,0,0,.4);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+#sheet.open{transform:translateX(0)}
+#sheet-header{display:flex;align-items:center;gap:10px;padding:14px 16px 0;flex-shrink:0;min-height:48px}
+#sheet-header h2{font-size:14px;font-weight:600;color:var(--text);flex:1}
+#sheet-header .hint{font-size:9px;color:var(--muted);background:var(--border);padding:2px 6px;border-radius:4px}
+#sheet-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:2px 6px;border-radius:4px;transition:all .2s}
+#sheet-close:hover{color:var(--text);background:var(--bg4)}
+#sheet-tabs{display:flex;gap:2px;padding:10px 12px 0;flex-shrink:0;overflow-x:auto}
+#sheet-tabs .st{flex:1;background:transparent;border:none;color:var(--muted);padding:7px 4px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:500;transition:all .2s;white-space:nowrap;text-align:center;position:relative}
+#sheet-tabs .st:hover{color:var(--text);background:var(--bg3)}
+#sheet-tabs .st.active{color:var(--accent);background:var(--bg3)}
+#sheet-tabs .st.active::after{content:'';position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);width:20px;height:2px;background:var(--accent);border-radius:2px}
+#sheet-content{flex:1;overflow-y:auto;padding:12px 16px 20px;-webkit-overflow-scrolling:touch}
+#sheet-content .sc-tab{display:none;animation:fadeIn .25s ease}
+#sheet-content .sc-tab.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── STATS ─── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.stat-card{background:var(--bg3);border-radius:var(--radius);padding:12px;text-align:center;border:1px solid var(--border);transition:all .3s;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent,rgba(255,255,255,.02));pointer-events:none}
+.stat-card:hover{border-color:var(--muted);transform:translateY(-1px)}
+.stat-card .v{font-size:22px;font-weight:700;line-height:1.2}
+.stat-card .v.accent{color:var(--accent)}
+.stat-card .v.danger{color:var(--accent2)}
+.stat-card .v.success{color:var(--success)}
+.stat-card .l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-top:4px;font-weight:500}
+.stat-card.full{grid-column:1/-1}
+
+#risk-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:12px;gap:2px}
+#risk-bar .seg{border-radius:4px;transition:width .6s cubic-bezier(.16,1,.3,1)}
+#risk-bar .seg.h{background:var(--accent2)}
+#risk-bar .seg.m{background:var(--accent)}
+#risk-bar .seg.l{background:var(--success)}
+
+#donut-wrap{display:flex;align-items:center;gap:16px;margin-bottom:12px;background:var(--bg3);border-radius:var(--radius);padding:12px;border:1px solid var(--border)}
+#donut{width:80px;height:80px;flex-shrink:0}
+#donut-labels{font-size:11px;flex:1}
+#donut-labels .row{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+#donut-labels .row:last-child{margin-bottom:0}
+#donut-labels .row .dot{width:8px;height:8px;border-radius:3px;flex-shrink:0}
+#donut-labels .row .lbl{color:var(--muted)}
+#donut-labels .row .num{font-weight:700;margin-left:auto;font-size:12px}
+
+#insight-card{background:var(--bg3);border-radius:var(--radius);padding:12px 14px;border-left:3px solid var(--accent);border:1px solid var(--border);border-left-width:3px}
+#insight-card .t{font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:500;letter-spacing:.5px;text-transform:uppercase}
+#insight-card .b{font-size:12px;line-height:1.6;color:var(--text)}
+#insight-card .b em{color:var(--accent);font-style:normal;font-weight:600}
+
+/* ─── WARD LIST ─── */
+.pc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center}
+.pc-label{font-size:10px;color:var(--muted);font-weight:500}
+.slider-r{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted)}
+.slider-r input[type=range]{width:64px;accent-color:var(--accent);height:3px;cursor:pointer}
+.slider-r .sv{font-weight:700;color:var(--text);font-size:11px}
+.lg{display:flex;gap:3px}
+.lb{background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;transition:all .2s;font-weight:500}
+.lb.active{background:linear-gradient(135deg,var(--accent2),#d63850);color:#fff;border-color:var(--accent2);box-shadow:0 2px 8px rgba(233,69,96,.2)}
+.lb:hover{background:var(--bg4);color:var(--text)}
+#ws{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:11px;outline:none;margin-bottom:8px;transition:border-color .2s}
+#ws:focus{border-color:var(--accent)}
+#ws::placeholder{color:var(--muted);opacity:.4}
+.sr{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);margin-bottom:8px}
+.sb{background:transparent;border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:4px;cursor:pointer;font-size:9px;transition:all .15s;font-weight:500}
+.sb.active{background:var(--bg4);color:var(--text);border-color:var(--accent)}
+.sb:hover{background:var(--bg4)}
+#wl{font-size:11px;max-height:320px;overflow-y:auto;border-radius:var(--radius);border:1px solid var(--border)}
+#wl .wr{padding:7px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all .15s}
+#wl .wr:last-child{border-bottom:none}
+#wl .wr:hover{background:var(--bg4)}
+#wl .wr .wn{font-weight:500;font-size:11px;color:var(--text)}
+#wl .wr .wv{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.wv-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+#wl .es{text-align:center;padding:40px 16px;color:var(--muted)}
+#wl .es .ic{font-size:32px;margin-bottom:12px;opacity:.4}
+#wl .es .et{font-size:12px;margin-bottom:4px}
+#wl .es .esub{font-size:10px;opacity:.6}
+
+/* ─── INSIGHT ─── */
+#insight-full{font-size:12px;line-height:1.7;color:var(--text);margin-bottom:12px}
+#insight-full .stat-line{padding:4px 0;display:flex;justify-content:space-between;border-bottom:1px solid var(--border)}
+#insight-full .stat-line:last-child{border-bottom:none}
+#insight-full .stat-line .sl{color:var(--muted)}
+#insight-full .stat-line .sv{font-weight:600}
+#insight-per-cell{font-size:11px;max-height:400px;overflow-y:auto;margin-top:8px}
+
+/* ─── COMPARE ─── */
+#comp-cities{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+#comp-cities .cc{background:var(--bg3);border:1px solid var(--border);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;transition:all .2s;font-weight:500}
+#comp-cities .cc.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 8px rgba(240,136,62,.2)}
+#comp-chart{position:relative;height:180px;margin:12px 0;background:var(--bg3);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+#comp-stats{font-size:11px;color:var(--text);line-height:1.7}
+#comp-stats .cs-line{padding:3px 0;border-bottom:1px solid var(--border)}
+#comp-stats .cs-line:last-child{border-bottom:none}
+
+/* ─── EXPORT ─── */
+.export-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.export-actions .top-btn{flex:1;justify-content:center;min-width:80px}
+#bm-list{margin-bottom:10px;max-height:200px;overflow-y:auto}
+#bm-list .bm{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg3);border-radius:6px;margin-bottom:4px;font-size:11px;border:1px solid var(--border);transition:all .15s}
+#bm-list .bm .del{cursor:pointer;color:var(--accent2);padding:2px 6px;border-radius:4px;font-size:12px;transition:background .15s}
+#bm-list .bm .del:hover{background:rgba(233,69,96,.15)}
+#bm-list .bm .load-btn{background:var(--bg4);border:1px solid var(--border);color:var(--text);padding:2px 8px;border-radius:4px;cursor:pointer;font-size:9px;transition:all .15s}
+#bm-list .bm .load-btn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ─── LOADING ─── */
+#analyze-loading{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:500;background:var(--glass);padding:24px 36px;border-radius:16px;border:1px solid var(--border);font-size:13px;box-shadow:var(--shadow);text-align:center;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);animation:loadIn .3s ease}
+@keyframes loadIn{from{opacity:0;transform:translate(-50%,-50%) scale(.9)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+#analyze-loading .sp{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;margin-right:10px;vertical-align:middle}
+@keyframes sp{to{transform:rotate(360deg)}}
+#analyze-loading .h{color:var(--muted);font-size:11px;margin-top:6px}
+
+/* ─── TOAST ─── */
+#toast{position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:99990;padding:10px 20px;border-radius:8px;font-size:12px;display:none;max-width:420px;text-align:center;pointer-events:none;animation:toastIn .3s ease;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:var(--shadow)}
+#toast.show{display:block}
+#toast.info{background:rgba(30,58,138,.6);color:#93c5fd;border:1px solid rgba(59,130,246,.3)}
+#toast.success{background:rgba(20,83,45,.6);color:#86efac;border:1px solid rgba(34,197,94,.3)}
+#toast.error{background:rgba(127,29,29,.6);color:#fca5a5;border:1px solid rgba(233,69,96,.3)}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* ─── MODALS ─── */
+.modal-overlay{position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:440px;width:90%;max-height:80vh;overflow-y:auto;animation:modalIn .35s cubic-bezier(.16,1,.3,1);box-shadow:var(--shadow)}
+@keyframes modalIn{from{opacity:0;transform:translateY(24px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+.modal-card h2{font-size:16px;margin-bottom:4px;color:var(--text);font-weight:600}
+.modal-card .sub{font-size:11px;color:var(--muted);margin-bottom:16px}
+.modal-card .r{display:flex;justify-content:space-between;padding:6px 0;font-size:12px;border-bottom:1px solid var(--border)}
+.modal-card .r:last-child{border-bottom:none}
+.modal-card .r kbd{background:var(--bg4);padding:2px 8px;border-radius:4px;font-size:10px;font-family:monospace;color:var(--text);border:1px solid var(--border)}
+.modal-card .r .desc{color:var(--muted)}
+.modal-footer{display:flex;justify-content:flex-end;margin-top:16px;gap:8px}
+
+/* ─── LEGEND ─── */
+.leaflet-control.legend{background:var(--glass);padding:10px 14px;border-radius:var(--radius);font-size:10px;color:var(--text);border:1px solid var(--border);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:var(--shadow);min-width:120px}
+.legend .tt{font-weight:600;margin-bottom:4px;font-size:11px}
+.legend .g{height:10px;border-radius:4px;margin:4px 0}
+.legend .ls{display:flex;justify-content:space-between;font-size:9px;color:var(--muted)}
+.legend hr{border:none;border-top:1px solid var(--border);margin:6px 0}
+.legend .rw{display:flex;align-items:center;gap:6px;margin:3px 0}
+.legend .rw i{width:8px;height:8px;border-radius:3px;flex-shrink:0}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:768px){
+  #sheet{width:100%}
+  #panel-toggle.open{right:calc(100% + 4px)}
+  #top-bar{padding:8px 10px;gap:6px}
+  .logo-label{font-size:13px}
+  .logo-icon{width:24px;height:24px;font-size:12px}
+  #search-wrap{max-width:120px;min-width:60px}
+  #city-select{min-width:80px;font-size:11px;padding:5px 22px 5px 8px}
+  .top-btn{font-size:10px;padding:5px 10px}
+  .top-btn-icon{font-size:13px;padding:5px 8px}
+  #sheet-tabs .st{font-size:9px;padding:6px 4px}
+  .stat-card .v{font-size:18px}
+  .stats-grid{grid-template-columns:1fr 1fr;gap:6px}
+  #donut-wrap{padding:10px}
+  #donut{width:64px;height:64px}
+}
+@media(max-width:480px){
+  #top-bar{flex-wrap:wrap;gap:4px}
+  #search-wrap{max-width:100%;min-width:100%;order:3}
+  .top-actions{gap:3px}
+  .top-btn{padding:4px 8px;font-size:9px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ SPLASH ═══ -->
+<div id="splash">
+  <div id="splash-glow"></div>
+  <div id="splash-heat-ring"></div>
+  <div id="splash-heat-ring2"></div>
+  <div id="splash-particles"></div>
+  <div id="splash-inner">
+    <div id="splash-logo">HeatVision</div>
+    <div id="splash-sub">Urban Heat Island Mapping</div>
+  </div>
+  <div id="splash-loader"><div class="fill"></div></div>
+</div>
+
+<!-- ═══ THREE.JS GLOBE ═══ -->
+<canvas id="globe-canvas"></canvas>
+
+<!-- ═══ TOP BAR ═══ -->
+<div id="top-bar">
+  <div class="logo-wrap">
+    <div class="logo-icon">HV</div>
+    <span class="logo-label">HeatVision</span>
+  </div>
+  <select id="city-select"><option>Loading…</option></select>
+  <div id="search-wrap">
+    <span class="si">&#128269;</span>
+    <input id="search-input" type="text" placeholder="Search wards…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div class="top-actions">
+    <button class="top-btn primary" id="draw-btn">&#10038; Draw</button>
+    <button class="top-btn top-btn-icon top-badge" id="story-btn" title="Story Tour">&#127917;</button>
+    <button class="top-btn top-btn-icon" id="shortcuts-btn" title="Keyboard Shortcuts (?)">?</button>
+  </div>
+</div>
+
+<!-- ═══ MAP ═══ -->
+<div id="map-wrap">
+  <div id="draw-hint">
+    <span id="dh-text">&#10038; Click and drag to draw a rectangle</span>
+    <span class="k">Esc</span> cancel
+  </div>
+  <div id="map"></div>
+  <div id="analyze-loading">
+    <span class="sp"></span> Analysing…
+    <div class="h" id="loading-hint">Fetching data</div>
+  </div>
+
+  <button id="panel-toggle">&#9776;</button>
+
+  <div id="sheet">
+    <div id="sheet-header">
+      <h2 id="panel-title">HeatVision</h2>
+      <span class="hint" id="panel-hint">Overview</span>
+      <button id="sheet-close">&times;</button>
+    </div>
+    <div id="sheet-tabs">
+      <button class="st active" data-tab="stats">Stats</button>
+      <button class="st" data-tab="list">Wards</button>
+      <button class="st" data-tab="insight">Insight</button>
+      <button class="st" data-tab="compare">Compare</button>
+      <button class="st" data-tab="export">Export</button>
+    </div>
+    <div id="sheet-content">
+      <!-- Stats Tab -->
+      <div class="sc-tab active" id="tab-stats">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="v success" id="s-wards">—</div><div class="l">Wards</div></div>
+          <div class="stat-card"><div class="v accent" id="s-lst">—&#176;</div><div class="l">Avg LST</div></div>
+          <div class="stat-card"><div class="v" id="s-ndvi" style="color:var(--success)">—</div><div class="l">Avg NDVI</div></div>
+          <div class="stat-card"><div class="v danger" id="s-high">—</div><div class="l">High Risk</div></div>
+        </div>
+        <div id="risk-bar">
+          <div class="seg h" style="width:0%"></div>
+          <div class="seg m" style="width:0%"></div>
+          <div class="seg l" style="width:0%"></div>
+        </div>
+        <div id="donut-wrap">
+          <svg id="donut" viewBox="0 0 36 36"></svg>
+          <div id="donut-labels">
+            <div class="row"><span class="dot" style="background:var(--accent2)"></span><span class="lbl">High</span><span class="num" id="dh" style="color:var(--accent2)">0</span></div>
+            <div class="row"><span class="dot" style="background:var(--accent)"></span><span class="lbl">Medium</span><span class="num" id="dm" style="color:var(--accent)">0</span></div>
+            <div class="row"><span class="dot" style="background:var(--success)"></span><span class="lbl">Low</span><span class="num" id="dl" style="color:var(--success)">0</span></div>
+          </div>
+        </div>
+        <div id="insight-card">
+          <div class="t">AI Insight</div>
+          <div class="b" id="insight-text">Select a city to see AI-powered heat insights.</div>
+        </div>
+      </div>
+
+      <!-- Wards Tab -->
+      <div class="sc-tab" id="tab-list">
+        <div class="pc">
+          <span class="pc-label">Grid:</span>
+          <input type="range" id="grid-slider" min="4" max="32" value="16" step="2">
+          <span class="sv" id="grid-val">16</span><span style="color:var(--muted);font-size:10px">&#215;16</span>
+          <div class="lg" style="margin-left:auto">
+            <button class="lb active" data-layer="heat">Heat</button>
+            <button class="lb" data-layer="risk">Risk</button>
+            <button class="lb" data-layer="hotspot">Hotspots</button>
+          </div>
+        </div>
+        <input id="ws" type="text" placeholder="Filter wards…">
+        <div class="sr">
+          Sort:
+          <button class="sb active" data-sort="default">Default</button>
+          <button class="sb" data-sort="lst">LST</button>
+          <button class="sb" data-sort="ndvi">NDVI</button>
+          <button class="sb" data-sort="risk">Risk</button>
+        </div>
+        <div id="wl">
+          <div class="es">
+            <div class="ic">&#127758;</div>
+            <div class="et">Select a city to view wards</div>
+            <div class="esub">Or draw an area on the map</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Insight Tab -->
+      <div class="sc-tab" id="tab-insight">
+        <div id="insight-full"></div>
+        <div id="insight-per-cell"></div>
+      </div>
+
+      <!-- Compare Tab -->
+      <div class="sc-tab" id="tab-compare">
+        <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Compare heat profiles across cities:</p>
+        <div id="comp-cities"></div>
+        <div id="comp-chart"><div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:11px">Select cities to compare</div></div>
+        <div id="comp-stats"></div>
+      </div>
+
+      <!-- Export Tab -->
+      <div class="sc-tab" id="tab-export">
+        <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Download current analysis or save for later:</p>
+        <div class="export-actions">
+          <button class="top-btn" id="export-geojson">Export GeoJSON</button>
+          <button class="top-btn" id="export-csv">Export CSV</button>
+          <button class="top-btn" id="save-bookmark">Save Bookmark</button>
+        </div>
+        <div id="bm-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+<div class="modal-overlay" id="shortcuts-modal">
+  <div class="modal-card">
+    <h2>Keyboard Shortcuts</h2>
+    <div class="sub">Navigate HeatVision with your keyboard</div>
+    <div class="r"><span>Heat map</span><kbd>1</kbd></div>
+    <div class="r"><span>Risk zones</span><kbd>2</kbd></div>
+    <div class="r"><span>Hotspots</span><kbd>3</kbd></div>
+    <div class="r"><span>Draw mode</span><kbd>D</kbd></div>
+    <div class="r"><span>Search</span><kbd>S</kbd></div>
+    <div class="r"><span>Fullscreen</span><kbd>F</kbd></div>
+    <div class="r"><span>Toggle panel</span><kbd>E</kbd></div>
+    <div class="r"><span>Story tour</span><kbd>T</kbd></div>
+    <div class="r"><span>Shortcuts</span><kbd>?</kbd></div>
+    <div class="r"><span>Cancel / Close</span><kbd>Esc</kbd></div>
+    <div class="modal-footer">
+      <button class="top-btn" id="shortcuts-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="story-overlay">
+  <div class="modal-card" id="story-card">
+    <h2 id="story-title">Welcome to HeatVision</h2>
+    <p id="story-body" style="font-size:12px;line-height:1.7;color:var(--muted);margin-bottom:16px">
+      Urban Heat Island Mapper helps you visualise land surface temperature, vegetation health, and heat risk across cities. Explore the interactive map, analyse data layers, and uncover environmental justice insights.
+    </p>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:10px;color:var(--muted)" id="story-progress">1/3</span>
+      <div>
+        <button class="top-btn" id="story-prev" style="display:none">← Back</button>
+        <button class="top-btn" id="story-next">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+//  1. THREE.JS GLOBE
+// ═══════════════════════════════════════════════════════════════════════
+
+let splashResolved = false;
+
+// Splash particles
+function initSplashParticles() {
+  const container = document.getElementById('splash-particles');
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'splash-particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.width = (1 + Math.random() * 2) + 'px';
+    p.style.height = p.style.width;
+    p.style.animationDuration = (6 + Math.random() * 8) + 's';
+    p.style.animationDelay = Math.random() * 5 + 's';
+    p.style.background = `rgba(${233 + Math.random() * 22},${69 + Math.random() * 67},${Math.random() * 60},${0.2 + Math.random() * 0.4})`;
+    container.appendChild(p);
+  }
+}
+
+const globeCities = [
+  {name:'Bangalore',lat:12.97,lng:77.59,temp:32},{name:'Mumbai',lat:19.07,lng:72.87,temp:34},
+  {name:'Delhi',lat:28.70,lng:77.10,temp:38},{name:'Chennai',lat:13.08,lng:80.27,temp:35},
+  {name:'Kolkata',lat:22.57,lng:88.36,temp:33},{name:'London',lat:51.51,lng:-0.13,temp:22},
+  {name:'Tokyo',lat:35.68,lng:139.69,temp:27},{name:'New York',lat:40.71,lng:-74.01,temp:28},
+  {name:'Sydney',lat:-33.87,lng:151.21,temp:26},{name:'Cairo',lat:30.04,lng:31.24,temp:36},
+  {name:'Moscow',lat:55.76,lng:37.62,temp:18},{name:'Singapore',lat:1.35,lng:103.82,temp:31},
+];
+
+function initGlobe() {
+  const canvas = document.getElementById('globe-canvas');
+  const w = window.innerWidth, h = window.innerHeight;
+  canvas.width = w; canvas.height = h;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
+  camera.position.set(0, 0.8, 3.8);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  function makeEarthTexture() {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
+    const ctx = c.getContext('2d');
+    const grad = ctx.createLinearGradient(0,0,0,512);
+    grad.addColorStop(0,'#05080f'); grad.addColorStop(0.15,'#070d1a');
+    grad.addColorStop(0.5,'#0a1225'); grad.addColorStop(0.85,'#070d1a');
+    grad.addColorStop(1,'#05080f');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,1024,512);
+    for(let i=0;i<30000;i++){
+      const x=Math.random()*1024,y=Math.random()*512,s=Math.random()*4+1;
+      ctx.fillStyle=`rgba(20,40,80,${Math.random()*0.03})`;
+      ctx.fillRect(x,y,s,s);
+    }
+    for(let lat=-80;lat<=80;lat+=20){
+      const y=((90-lat)/180)*512;
+      ctx.strokeStyle='rgba(40,80,160,0.04)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(1024,y); ctx.stroke();
+    }
+    const cityClusters = [
+      {x:710,y:210,r:20,c:38},{x:700,y:190,r:12,c:34},{x:720,y:200,r:8,c:33},{x:680,y:170,r:10,c:32},
+      {x:520,y:110,r:15,c:22},{x:540,y:120,r:10,c:24},{x:510,y:100,r:8,c:18},
+      {x:780,y:130,r:18,c:27},{x:800,y:140,r:14,c:31},{x:790,y:150,r:10,c:33},
+      {x:200,y:110,r:16,c:28},{x:220,y:130,r:14,c:26},{x:180,y:100,r:10,c:22},
+      {x:310,y:240,r:12,c:35},{x:320,y:260,r:10,c:33},{x:300,y:220,r:8,c:32},
+      {x:560,y:170,r:12,c:36},{x:550,y:200,r:10,c:35},{x:580,y:160,r:15,c:34},
+      {x:830,y:300,r:10,c:26},{x:760,y:190,r:12,c:31},
+    ];
+    cityClusters.forEach(cl=>{
+      const intensity=Math.min((cl.c-15)/30,1);
+      const baseR=255,baseG=Math.round(200*(1-intensity*0.6)),baseB=Math.round(80*(1-intensity*0.7));
+      for(let i=0;i<cl.r*4;i++){
+        const angle=Math.random()*Math.PI*2,dist=Math.random()*cl.r*0.3;
+        const px=cl.x+Math.cos(angle)*dist,py=cl.y+Math.sin(angle)*dist*0.6;
+        const s=Math.random()*2+0.5,alpha=0.3+Math.random()*0.5*intensity;
+        ctx.fillStyle=`rgba(${baseR},${baseG},${baseB},${alpha})`;
+        ctx.fillRect(px,py,s,s);
+      }
+      const glowGrad=ctx.createRadialGradient(cl.x,cl.y,0,cl.x,cl.y,cl.r*1.5);
+      glowGrad.addColorStop(0,`rgba(${baseR},${baseG},${baseB},${0.06+intensity*0.1})`);
+      glowGrad.addColorStop(0.4,`rgba(${baseR},${baseG},${baseB},${0.02+intensity*0.04})`);
+      glowGrad.addColorStop(1,`rgba(${baseR},${baseG},${baseB},0)`);
+      ctx.fillStyle=glowGrad; ctx.beginPath(); ctx.arc(cl.x,cl.y,cl.r*1.5,0,Math.PI*2); ctx.fill();
+      for(let i=0;i<6;i++){
+        const angle=Math.random()*Math.PI*2,len=cl.r*(0.5+Math.random()*1);
+        ctx.strokeStyle=`rgba(${baseR},${baseG},${baseB},${0.01+intensity*0.02})`; ctx.lineWidth=0.5;
+        ctx.beginPath(); ctx.moveTo(cl.x,cl.y);
+        ctx.lineTo(cl.x+Math.cos(angle)*len,cl.y+Math.sin(angle)*len); ctx.stroke();
+      }
+    });
+    return new THREE.CanvasTexture(c);
+  }
+
+  // Globe mesh
+  const geo = new THREE.SphereGeometry(1, 64, 64);
+  const mat = new THREE.MeshPhongMaterial({
+    color: 0x0a1a3a, emissive: 0x0a1225, emissiveIntensity: 0.6,
+    specular: 0x1a3a6a, shininess: 10, transparent: true, opacity: 0.92,
+  });
+  const globe = new THREE.Mesh(geo, mat);
+  scene.add(globe);
+
+  const texLoader = new THREE.TextureLoader();
+  texLoader.load('https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg',
+    (tex)=>{ mat.map=tex; mat.color.setHex(0xffffff); mat.emissiveIntensity=0.1; mat.needsUpdate=true; },
+    undefined,
+    ()=>{ const fb=makeEarthTexture(); mat.map=fb; mat.color.setHex(0xffffff); mat.needsUpdate=true; }
+  );
+
+  // Atmosphere glow (FIXED: innerGlow properly declared)
+  function makeGlowTexture(){
+    const c=document.createElement('canvas'); c.width=256; c.height=256;
+    const ctx=c.getContext('2d');
+    const g=ctx.createRadialGradient(128,128,0,128,128,128);
+    g.addColorStop(0,'rgba(74,138,255,0.4)'); g.addColorStop(0.3,'rgba(74,138,255,0.15)'); g.addColorStop(1,'rgba(74,138,255,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,256,256);
+    return new THREE.CanvasTexture(c);
+  }
+  const innerTex=makeGlowTexture();
+  const innerGlowGeo=new THREE.SphereGeometry(1.02,48,48);
+  const innerGlowMat=new THREE.MeshBasicMaterial({map:innerTex,transparent:true,opacity:0.25,side:THREE.BackSide,depthWrite:false});
+  const innerGlow = new THREE.Mesh(innerGlowGeo, innerGlowMat);
+  scene.add(innerGlow);
+
+  const outerGlowGeo=new THREE.SphereGeometry(1.15,48,48);
+  const outerGlowMat=new THREE.MeshBasicMaterial({color:0x3a6aaa,transparent:true,opacity:0.04,side:THREE.BackSide});
+  const outerGlow=new THREE.Mesh(outerGlowGeo,outerGlowMat);
+  scene.add(outerGlow);
+
+  // Grid
+  const gridMat=new THREE.LineBasicMaterial({color:0x4a8aff,transparent:true,opacity:0.08});
+  function addGridLine(pts){
+    const g=new THREE.BufferGeometry().setFromPoints(pts);
+    const l=new THREE.Line(g,gridMat);scene.add(l);
+  }
+  for(let lat=-80;lat<=80;lat+=30){
+    const pts=[];
+    for(let lng=-180;lng<=180;lng+=3){
+      const phi=(90-lat)*Math.PI/180,theta=lng*Math.PI/180;
+      pts.push(new THREE.Vector3(Math.sin(phi)*Math.cos(theta)*1.005,Math.cos(phi)*1.005,Math.sin(phi)*Math.sin(theta)*1.005));
+    }
+    addGridLine(pts);
+  }
+  for(let lng=-180;lng<=180;lng+=30){
+    const pts=[];
+    for(let lat=-85;lat<=85;lat+=2){
+      const phi=(90-lat)*Math.PI/180,theta=lng*Math.PI/180;
+      pts.push(new THREE.Vector3(Math.sin(phi)*Math.cos(theta)*1.005,Math.cos(phi)*1.005,Math.sin(phi)*Math.sin(theta)*1.005));
+    }
+    addGridLine(pts);
+  }
+
+  // City sprites
+  const citySprites=[];
+  globeCities.forEach(c=>{
+    const phi=(90-c.lat)*Math.PI/180,theta=c.lng*Math.PI/180;
+    const x=Math.sin(phi)*Math.cos(theta),y=Math.cos(phi),z=Math.sin(phi)*Math.sin(theta);
+    const intensity=Math.min(Math.max((c.temp-15)/30,0.2),1);
+    const sc=document.createElement('canvas');sc.width=128;sc.height=128;
+    const sctx=sc.getContext('2d');
+    const sg=sctx.createRadialGradient(64,64,0,64,64,64);
+    const r=255,g=Math.round(200*(1-intensity)),b=Math.round(100*(1-intensity));
+    sg.addColorStop(0,`rgba(${r},${g},${b},${0.5+intensity*0.5})`);
+    sg.addColorStop(0.2,`rgba(${r},${g},${b},${0.2+intensity*0.3})`);
+    sg.addColorStop(1,`rgba(${r},${g},${b},0)`);
+    sctx.fillStyle=sg;sctx.beginPath();sctx.arc(64,64,64,0,Math.PI*2);sctx.fill();
+    const tex=new THREE.CanvasTexture(sc);
+    const spMat=new THREE.SpriteMaterial({map:tex,blending:THREE.AdditiveBlending,depthTest:false,transparent:true});
+    const sprite=new THREE.Sprite(spMat);
+    sprite.position.set(x,y,z);
+    sprite.scale.set(0.3+intensity*0.4,0.3+intensity*0.4,1);
+    scene.add(sprite); citySprites.push(sprite);
+
+    const lc=document.createElement('canvas');lc.width=128;lc.height=48;
+    const lctx=lc.getContext('2d');
+    lctx.fillStyle='rgba(0,0,0,0)';lctx.fillRect(0,0,128,48);
+    lctx.textAlign='center';lctx.textBaseline='middle';
+    lctx.font='bold 24px -apple-system, sans-serif';
+    lctx.shadowColor='rgba(0,0,0,0.6)';lctx.shadowBlur=8;
+    lctx.fillStyle=`rgba(255,${g},${b},${0.5+intensity*0.5})`;
+    lctx.fillText(`${c.temp}°C`,64,22);
+    const labelTex=new THREE.CanvasTexture(lc);
+    const labelMat=new THREE.SpriteMaterial({map:labelTex,depthTest:false,transparent:true,opacity:0.8});
+    const label=new THREE.Sprite(labelMat);
+    label.position.set(x*1.18,y*1.18+0.06,z*1.18);
+    label.scale.set(0.5,0.18,1);
+    scene.add(label);
+  });
+
+  // Orbital ring
+  const ringCount=800; const ringPos=new Float32Array(ringCount*3);
+  for(let i=0;i<ringCount;i++){
+    const angle=Math.random()*Math.PI*2,radius=1.4+Math.random()*0.4,height=(Math.random()-0.5)*0.1;
+    ringPos[i*3]=Math.cos(angle)*radius;ringPos[i*3+1]=height;ringPos[i*3+2]=Math.sin(angle)*radius;
+  }
+  const ringGeo=new THREE.BufferGeometry();ringGeo.setAttribute('position',new THREE.BufferAttribute(ringPos,3));
+  const ringMat=new THREE.PointsMaterial({color:0x4a8aff,size:0.008,transparent:true,opacity:0.15,sizeAttenuation:true,blending:THREE.AdditiveBlending});
+  const ring=new THREE.Points(ringGeo,ringMat);scene.add(ring);
+
+  // Stars
+  const starCount=3000;const starPos=new Float32Array(starCount*3);const starColors=new Float32Array(starCount*3);
+  for(let i=0;i<starCount;i++){
+    const r=15+Math.random()*50,theta=Math.random()*Math.PI*2,phi=Math.acos(2*Math.random()-1);
+    starPos[i*3]=r*Math.sin(phi)*Math.cos(theta);starPos[i*3+1]=r*Math.cos(phi);starPos[i*3+2]=r*Math.sin(phi)*Math.sin(theta);
+    const cType=Math.random();
+    if(cType<0.1){starColors[i*3]=0.6;starColors[i*3+1]=0.7;starColors[i*3+2]=1}
+    else if(cType<0.2){starColors[i*3]=1;starColors[i*3+1]=0.8;starColors[i*3+2]=0.5}
+    else{starColors[i*3]=1;starColors[i*3+1]=1;starColors[i*3+2]=1}
+  }
+  const starGeo=new THREE.BufferGeometry();starGeo.setAttribute('position',new THREE.BufferAttribute(starPos,3));
+  starGeo.setAttribute('color',new THREE.BufferAttribute(starColors,3));
+  const starMat=new THREE.PointsMaterial({vertexColors:true,size:0.04,sizeAttenuation:false,transparent:true,opacity:0.7});
+  const stars=new THREE.Points(starGeo,starMat);scene.add(stars);
+
+  // Lights
+  const ambient=new THREE.AmbientLight(0x1a2a5a,0.5);scene.add(ambient);
+  const dir=new THREE.DirectionalLight(0x4a8aff,0.9);dir.position.set(2,3,4);scene.add(dir);
+  const dir2=new THREE.DirectionalLight(0xff6a3a,0.2);dir2.position.set(-2,-1,-3);scene.add(dir2);
+  const rim=new THREE.DirectionalLight(0xff6a3a,0.15);scene.add(rim);
+
+  // Animation loop
+  let time=0;
+  function animate(){
+    requestAnimationFrame(animate);
+    time+=0.004;
+
+    globe.rotation.y=time*0.15;
+    globe.rotation.x=Math.sin(time*0.08)*0.02;
+    innerGlow.rotation.y=time*0.15;
+    outerGlow.rotation.y=time*0.15*0.8;
+
+    gridMat.opacity=0.06+Math.sin(time*1.5)*0.03;
+    innerGlowMat.opacity=0.05+Math.sin(time*1.2)*0.025;
+    outerGlowMat.opacity=0.03+Math.sin(time*0.8)*0.015;
+
+    citySprites.forEach((s,i)=>{
+      const pulse=0.85+Math.sin(time*2+i*1.5)*0.15;
+      const base=0.3+(Math.min((globeCities[i]?.temp||25)-15,30)/30)*0.4;
+      s.scale.set(base*pulse,base*pulse,1);
+    });
+
+    ring.rotation.y=time*0.05;
+    stars.rotation.y=time*0.003;
+    stars.rotation.x=Math.sin(time*0.002)*0.02;
+
+    const rx=Math.cos(time*0.12)*3,rz=Math.sin(time*0.12)*3;
+    rim.position.set(rx,1,rz);
+
+    if(splashResolved){
+      camera.position.x=Math.sin(time*0.008)*0.3;
+      camera.position.y=0.8+Math.sin(time*0.006)*0.08;
+      camera.lookAt(0,0,0);
+    }
+
+    renderer.render(scene,camera);
+  }
+  animate();
+
+  window.addEventListener('resize',()=>{
+    const w2=window.innerWidth,h2=window.innerHeight;
+    camera.aspect=w2/h2;camera.updateProjectionMatrix();
+    renderer.setSize(w2,h2);
+  });
+}
+
+function dismissSplash(){
+  if(splashResolved)return;
+  splashResolved=true;
+  const splash=document.getElementById('splash');
+  splash.classList.add('hidden');
+  document.getElementById('globe-canvas').style.opacity='0.4';
+  setTimeout(()=>{
+    splash.style.display='none';
+    map.invalidateSize();
+  },900);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  2. LEAFLET MAP
+// ═══════════════════════════════════════════════════════════════════════
+
+const map = L.map('map', { zoomControl: true, attributionControl: false })
+  .setView([20, 0], 2);
+
+let geoLayer = null;
+let hotspotLayer = null;
+let currentLayer = 'heat';
+let drawControl = null;
+let drawnItems = null;
+let drawMode = false;
+let currentCity = '';
+let cachedFeatures = { heat: null, wards: null, predictions: null, equity: null };
+let sortBy = 'default';
+let sortDir = 1;
+let isCustomArea = false;
+let gridSize = 16;
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 18
+}).addTo(map);
+
+// ═══════════════════════════════════════════════════════════════════════
+//  3. API & DATA LOADING
+// ═══════════════════════════════════════════════════════════════════════
+
+async function api(url) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } catch (e) {
+    console.error('API error:', url, e);
+    return null;
+  }
+}
+
+async function loadCities() {
+  const data = await api('/api/cities');
+  if (!data || !data.cities) return;
+  const sel = document.getElementById('city-select');
+  sel.innerHTML = data.cities.map(c => `<option value="${c}">${c}</option>`).join('');
+  sel.value = data.default;
+  onCityChange();
+}
+
+async function onCityChange() {
+  currentCity = document.getElementById('city-select').value;
+  isCustomArea = false;
+  document.getElementById('panel-title').textContent = currentCity || 'HeatVision';
+  document.getElementById('panel-hint').textContent = 'Loading…';
+  showToast(`Loading ${currentCity}…`, 'info');
+  await loadMapData();
+  await loadStats();
+  document.getElementById('panel-hint').textContent = currentCity;
+  showToast(`Loaded ${currentCity}`, 'success');
+}
+
+async function loadMapData() {
+  if (!currentCity) return;
+  const [wards, heat, predictions, equity] = await Promise.all([
+    api(`/api/wards?city=${encodeURIComponent(currentCity)}`),
+    api(`/api/heat-map?city=${encodeURIComponent(currentCity)}`),
+    api(`/api/predictions?city=${encodeURIComponent(currentCity)}`),
+    api(`/api/equity?city=${encodeURIComponent(currentCity)}`),
+  ]);
+  cachedFeatures = { wards, heat, predictions, equity };
+  renderLayer();
+  renderWardList();
+  renderCompare();
+}
+
+async function loadStats() {
+  if (!currentCity) return;
+  const s = await api(`/api/stats?city=${encodeURIComponent(currentCity)}`);
+  if (!s) return;
+  animateCounter('s-wards', s.total_wards || 0);
+  animateCounter('s-lst', (s.avg_lst || 0), '°');
+  animateCounter('s-ndvi', (s.avg_ndvi || 0));
+  animateCounter('s-high', s.high_risk_wards || 0);
+  document.getElementById('dh').textContent = s.high_risk_wards || 0;
+  document.getElementById('dm').textContent = s.medium_risk_wards || 0;
+  document.getElementById('dl').textContent = s.low_risk_wards || 0;
+  const total = (s.high_risk_wards || 0) + (s.medium_risk_wards || 0) + (s.low_risk_wards || 0);
+  document.querySelector('#risk-bar .seg.h').style.width = total ? ((s.high_risk_wards || 0) / total * 100) + '%' : '0%';
+  document.querySelector('#risk-bar .seg.m').style.width = total ? ((s.medium_risk_wards || 0) / total * 100) + '%' : '0%';
+  document.querySelector('#risk-bar .seg.l').style.width = total ? ((s.low_risk_wards || 0) / total * 100) + '%' : '0%';
+  drawDonut(s.high_risk_wards || 0, s.medium_risk_wards || 0, s.low_risk_wards || 0);
+  generateInsight(s);
+}
+
+function animateCounter(elId, target, suffix = '') {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const start = parseFloat(el.dataset.val) || 0;
+  const duration = 800;
+  const startTime = performance.now();
+  el.dataset.val = target;
+  function step(now) {
+    const p = Math.min((now - startTime) / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    const val = start + (target - start) * ease;
+    el.textContent = (typeof target === 'number' && target % 1 !== 0 ? val.toFixed(2) : Math.round(val)) + suffix;
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function drawDonut(h, m, l) {
+  const svg = document.getElementById('donut');
+  const total = h + m + l || 1;
+  const sectors = [
+    { v: (h / total) * 360, c: '#e94560' },
+    { v: (m / total) * 360, c: '#f0883e' },
+    { v: (l / total) * 360, c: '#22c55e' }
+  ];
+  let offset = 0;
+  svg.innerHTML = sectors.map(s => {
+    if (s.v < 0.5) return '';
+    const startAngle = offset;
+    const r = (s.v / 360) * 2 * Math.PI;
+    const x1 = 18 + 18 * Math.sin(startAngle);
+    const y1 = 18 - 18 * Math.cos(startAngle);
+    const x2 = 18 + 18 * Math.sin(startAngle + r);
+    const y2 = 18 - 18 * Math.cos(startAngle + r);
+    const large = s.v > 180 ? 1 : 0;
+    offset += s.v;
+    return `<path d="M18 18 L${x1} ${y1} A18 18 0 ${large} 1 ${x2} ${y2} Z" fill="${s.c}" stroke="#0d121c" stroke-width="0.5"/>`;
+  }).join('');
+}
+
+function generateInsight(s) {
+  const el = document.getElementById('insight-text');
+  if (!s || !s.avg_lst) {
+    el.textContent = 'Select a city to see AI-powered heat insights.';
+    return;
+  }
+  const risk = s.high_risk_wards > s.medium_risk_wards ? 'elevated' : 'moderate';
+  const green = s.avg_ndvi > 0.3 ? 'adequate' : 'low';
+  el.innerHTML = `${currentCity} shows <em>${risk}</em> heat risk with an average LST of <em>${s.avg_lst}°C</em>. NDVI of <em>${s.avg_ndvi}</em> indicates <em>${green}</em> vegetation cover. <em>${s.high_risk_wards}</em> wards require urgent intervention.`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  4. MAP RENDERING (bug fixes: no legend stacking, no full re-render on mouseout)
+// ═══════════════════════════════════════════════════════════════════════
+
+function renderLayer() {
+  if (geoLayer) { map.removeLayer(geoLayer); geoLayer = null; }
+  if (hotspotLayer) { map.removeLayer(hotspotLayer); hotspotLayer = null; }
+
+  const data = cachedFeatures.heat;
+  if (!data || !data.features) return;
+
+  const lsts = data.features.map(f => f.properties.lst_mean).filter(v => v != null);
+  if (!lsts.length) return;
+  const minLST = Math.min(...lsts), maxLST = Math.max(...lsts);
+  const range = maxLST - minLST || 1;
+
+  if (currentLayer === 'heat') {
+    geoLayer = L.geoJSON(data, {
+      style: f => {
+        const lst = f.properties.lst_mean;
+        const ratio = lst != null ? (lst - minLST) / range : 0.5;
+        const r = Math.round(50 + 205 * ratio);
+        const g = Math.round(200 * (1 - ratio * 0.8));
+        const b = Math.round(100 * (1 - ratio));
+        return { fillColor: `rgb(${r},${g},${b})`, weight: 0.5, color: 'rgba(255,255,255,0.15)', fillOpacity: 0.7 };
+      },
+      onEachFeature: (f, l) => {
+        l.on({
+          click: () => showPopup(f, l),
+          mouseover: function() { this.setStyle({ weight: 1.5, color: '#fff', fillOpacity: 0.85 }); },
+          // FIXED: mouseout no longer triggers full re-render — just resets style
+          mouseout: function() { geoLayer && geoLayer.resetStyle(this); }
+        });
+      }
+    }).addTo(map);
+    fitBounds(data);
+  } else if (currentLayer === 'risk') {
+    const pred = cachedFeatures.predictions;
+    if (pred && pred.features) {
+      geoLayer = L.geoJSON(pred, {
+        style: f => {
+          const cat = f.properties.risk_category;
+          const colors = { high: '#e94560', medium: '#f0883e', low: '#22c55e' };
+          return { fillColor: colors[cat] || '#888', weight: 0.5, color: 'rgba(255,255,255,0.15)', fillOpacity: 0.7 };
+        },
+        onEachFeature: (f, l) => {
+          l.on({
+            click: () => showRiskPopup(f, l),
+            mouseover: function() { this.setStyle({ weight: 1.5, color: '#fff', fillOpacity: 0.85 }); },
+            mouseout: function() { geoLayer && geoLayer.resetStyle(this); }
+          });
+        }
+      }).addTo(map);
+      fitBounds(pred);
+    }
+  } else if (currentLayer === 'hotspot') {
+    const hotspots = data.features.filter(f => {
+      const lst = f.properties.lst_mean;
+      return lst != null && lst > minLST + range * 0.7;
+    });
+    if (hotspots.length) {
+      hotspotLayer = L.geoJSON({ type: 'FeatureCollection', features: hotspots }, {
+        pointToLayer: (f, latlng) => {
+          const r = f.properties.lst_mean ? (f.properties.lst_mean - minLST) / range : 0.7;
+          return L.circleMarker(latlng, {
+            radius: 4 + 8 * r, fillColor: '#ff6b6b', color: '#fff', weight: 1.5, fillOpacity: 0.8
+          });
+        },
+        onEachFeature: (f, l) => {
+          l.bindPopup(`<b>${f.properties.ward_name}</b><br>LST: ${f.properties.lst_mean}°C<br>NDVI: ${f.properties.ndvi_mean}`);
+        }
+      }).addTo(map);
+    }
+    geoLayer = L.geoJSON(data, {
+      style: { fillOpacity: 0.05, weight: 0.3, color: 'rgba(255,255,255,0.1)' },
+      onEachFeature: (f, l) => { l.on('click', () => showPopup(f, l)); }
+    }).addTo(map);
+    fitBounds(data);
+  }
+}
+
+function fitBounds(data) {
+  const bounds = L.geoJSON(data).getBounds();
+  if (bounds.isValid()) {
+    map.fitBounds(bounds, { padding: [20, 20], maxZoom: 14 });
+  }
+}
+
+function showPopup(f, l) {
+  const p = f.properties;
+  l.bindPopup(`
+    <h3>${p.ward_name || 'Area'}</h3>
+    <b>LST</b>: ${p.lst_mean != null ? p.lst_mean + '°C' : '—'} 
+    <span style="color:var(--muted)">(${p.lst_min != null ? p.lst_min : '—'}–${p.lst_max != null ? p.lst_max : '—'})</span><br>
+    <b>NDVI</b>: ${p.ndvi_mean != null ? p.ndvi_mean.toFixed(3) : '—'}
+    <span style="color:var(--muted)">(${p.ndvi_min != null ? p.ndvi_min : '—'}–${p.ndvi_max != null ? p.ndvi_max : '—'})</span><br>
+    <b>Ratio</b>: ${p.heat_ndvi_ratio != null ? p.heat_ndvi_ratio.toFixed(2) : '—'}
+  `).openPopup();
+}
+
+function showRiskPopup(f, l) {
+  const p = f.properties;
+  const badges = { high: '<span class="popup-badge high">High</span>', medium: '<span class="popup-badge medium">Medium</span>', low: '<span class="popup-badge low">Low</span>' };
+  l.bindPopup(`
+    <h3>${p.ward_name || 'Area'}</h3>
+    <b>Risk</b>: ${badges[p.risk_category] || p.risk_category || '—'}<br>
+    <b>Score</b>: ${p.risk_score != null ? p.risk_score.toFixed(3) : '—'}<br>
+    <b>Model</b>: ${p.model_version || '—'}
+  `).openPopup();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  5. WARD LIST
+// ═══════════════════════════════════════════════════════════════════════
+
+function renderWardList() {
+  const el = document.getElementById('wl');
+  const data = cachedFeatures.heat;
+  if (!data || !data.features) {
+    el.innerHTML = '<div class="es"><div class="ic">&#127758;</div><div class="et">No data available</div><div class="esub">Select a city or draw an area</div></div>';
+    return;
+  }
+  let wards = [...data.features];
+  const filter = document.getElementById('ws').value.toLowerCase();
+  if (filter) wards = wards.filter(f => (f.properties.ward_name || '').toLowerCase().includes(filter));
+  const sortField = { default: 'ward_id', lst: 'lst_mean', ndvi: 'ndvi_mean', risk: 'risk_score' }[sortBy] || 'ward_id';
+  if (sortField === 'risk') {
+    const preds = cachedFeatures.predictions;
+    if (preds) {
+      const riskMap = {};
+      preds.features.forEach(f => { riskMap[f.properties.ward_id] = f.properties.risk_score || 0; });
+      wards.sort((a, b) => (riskMap[a.properties.ward_id] || 0) - (riskMap[b.properties.ward_id] || 0));
+    }
+  } else {
+    wards.sort((a, b) => {
+      const av = a.properties[sortField], bv = b.properties[sortField];
+      if (av == null) return 1; if (bv == null) return -1;
+      return sortDir * (typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv)));
+    });
+  }
+
+  // Get risk info for color dots
+  const riskMap = {};
+  const preds = cachedFeatures.predictions;
+  if (preds) {
+    preds.features.forEach(f => {
+      riskMap[f.properties.ward_id] = f.properties.risk_category || 'low';
+    });
+  }
+
+  el.innerHTML = wards.map(f => {
+    const p = f.properties;
+    const lst = p.lst_mean != null ? `${p.lst_mean}°` : '—';
+    const ndvi = p.ndvi_mean != null ? p.ndvi_mean.toFixed(3) : '—';
+    const cat = riskMap[p.ward_id] || 'low';
+    const dotColors = { high: '#e94560', medium: '#f0883e', low: '#22c55e' };
+    return `<div class="wr" data-id="${p.ward_id}">
+      <span class="wn">${p.ward_name || 'Ward'}</span>
+      <span class="wv"><span class="wv-dot" style="background:${dotColors[cat]}"></span>${lst} · ${ndvi}</span>
+    </div>`;
+  }).join('');
+
+  // Attach click handlers
+  el.querySelectorAll('.wr').forEach(el => {
+    el.addEventListener('click', () => flyToWard(parseInt(el.dataset.id)));
+  });
+}
+
+function flyToWard(id) {
+  const data = cachedFeatures.heat;
+  if (!data) return;
+  const feat = data.features.find(f => f.properties.ward_id === id);
+  if (!feat) return;
+  const layer = L.geoJSON(feat);
+  const b = layer.getBounds();
+  if (b.isValid()) map.fitBounds(b, { padding: [50, 50] });
+}
+
+function setSort(s) {
+  if (sortBy === s) sortDir *= -1;
+  else { sortBy = s; sortDir = 1; }
+  document.querySelectorAll('.sb').forEach(b => b.classList.toggle('active', b.dataset.sort === s));
+  renderWardList();
+}
+
+function switchLayer(l) {
+  currentLayer = l;
+  document.querySelectorAll('.lb').forEach(b => b.classList.toggle('active', b.dataset.layer === l));
+  renderLayer();
+}
+
+function onGridChange() {
+  gridSize = parseInt(document.getElementById('grid-slider').value);
+  document.getElementById('grid-val').textContent = gridSize;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  6. SEARCH (debounced)
+// ═══════════════════════════════════════════════════════════════════════
+
+let searchTimeout;
+
+function onSearchInput() {
+  clearTimeout(searchTimeout);
+  const q = document.getElementById('search-input').value.trim();
+  const el = document.getElementById('search-results');
+  if (q.length < 2) { el.style.display = 'none'; return; }
+  searchTimeout = setTimeout(async () => {
+    const data = await api(`/api/wards?city=${currentCity || ''}`);
+    if (!data) return;
+    const matches = data.features
+      .filter(f => (f.properties.ward_name || '').toLowerCase().includes(q.toLowerCase()))
+      .slice(0, 10);
+    el.innerHTML = matches.map(m => {
+      const wid = m.properties.ward_id;
+      return `<div class="r" data-id="${wid}">${m.properties.ward_name}<br><span class="s">${m.properties.city || ''}</span></div>`;
+    }).join('');
+    el.style.display = matches.length ? 'block' : 'none';
+    el.querySelectorAll('.r').forEach(r => {
+      r.addEventListener('click', () => {
+        flyToWard(parseInt(r.dataset.id));
+        el.style.display = 'none';
+        document.getElementById('search-input').value = '';
+      });
+    });
+  }, 300);
+}
+
+function onSearchKeydown(e) {
+  if (e.key === 'Escape') {
+    document.getElementById('search-results').style.display = 'none';
+    document.getElementById('search-input').blur();
+  }
+  if (e.key === 'Enter') {
+    const first = document.querySelector('#search-results .r');
+    if (first) first.click();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  7. DRAW MODE
+// ═══════════════════════════════════════════════════════════════════════
+
+function toggleDrawMode() {
+  drawMode = !drawMode;
+  document.getElementById('draw-btn').classList.toggle('active', drawMode);
+  document.getElementById('draw-hint').style.display = drawMode ? 'flex' : 'none';
+  if (drawMode) enableDraw();
+  else disableDraw();
+  showToast(drawMode ? 'Draw mode enabled' : 'Draw mode disabled', 'info');
+}
+
+function enableDraw() {
+  if (!drawnItems) { drawnItems = new L.FeatureGroup(); map.addLayer(drawnItems); }
+  if (!drawControl) {
+    drawControl = new L.Control.Draw({
+      edit: { featureGroup: drawnItems },
+      draw: { polygon: false, circle: false, rectangle: true, marker: false, circlemarker: false, polyline: false }
+    });
+    map.addControl(drawControl);
+  }
+  map.on(L.Draw.Event.CREATED, onDrawCreated);
+}
+
+function disableDraw() {
+  if (drawControl) { map.removeControl(drawControl); drawControl = null; }
+  map.off(L.Draw.Event.CREATED, onDrawCreated);
+  if (drawnItems) { map.removeLayer(drawnItems); drawnItems = null; }
+}
+
+async function onDrawCreated(e) {
+  drawnItems.addLayer(e.layer);
+  const bounds = e.layer.getBounds();
+  showToast('Analysing drawn area…', 'info');
+  document.getElementById('analyze-loading').style.display = 'block';
+  document.getElementById('loading-hint').textContent = 'Fetching climate data';
+  try {
+    const body = {
+      west: bounds.getWest(), south: bounds.getSouth(),
+      east: bounds.getEast(), north: bounds.getNorth(),
+      grid_size: gridSize
+    };
+    if (currentCity) body.city = currentCity;
+    const res = await fetch('/api/analyze-area', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!data || !data.features) { showToast('Analysis returned no data', 'error'); return; }
+    cachedFeatures.heat = data;
+    isCustomArea = true;
+    renderLayer();
+    renderWardList();
+    showToast(`Analysis complete: ${data.features.length} cells`, 'success');
+  } catch (e) {
+    showToast('Analysis failed', 'error');
+  } finally {
+    document.getElementById('analyze-loading').style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  8. SIDE PANEL & TABS
+// ═══════════════════════════════════════════════════════════════════════
+
+function togglePanel() {
+  document.getElementById('sheet').classList.toggle('open');
+  document.getElementById('panel-toggle').classList.toggle('open');
+  setTimeout(() => map.invalidateSize(), 400);
+}
+
+function switchSheetTab(tab) {
+  document.querySelectorAll('.st').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.sc-tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + tab));
+  if (tab === 'insight') renderFullInsight();
+  if (tab === 'compare') renderCompare();
+}
+
+function renderFullInsight() {
+  const el = document.getElementById('insight-full');
+  const perEl = document.getElementById('insight-per-cell');
+  const data = cachedFeatures.heat;
+  if (!data || !data.features) {
+    el.innerHTML = '<p style="color:var(--muted)">Select a city to see detailed insights.</p>';
+    perEl.innerHTML = '';
+    return;
+  }
+  const features = data.features;
+  const lsts = features.map(f => f.properties.lst_mean).filter(v => v != null);
+  const ndvis = features.map(f => f.properties.ndvi_mean).filter(v => v != null);
+  if (!lsts.length) {
+    el.innerHTML = '<p style="color:var(--muted)">No numeric data available for insights.</p>';
+    perEl.innerHTML = '';
+    return;
+  }
+  const avgLst = lsts.reduce((a, b) => a + b, 0) / lsts.length;
+  const avgNdvi = ndvis.length ? ndvis.reduce((a, b) => a + b, 0) / ndvis.length : 0;
+  const maxLst = Math.max(...lsts);
+  const minLst = Math.min(...lsts);
+  const maxWard = features.find(f => f.properties.lst_mean === maxLst)?.properties.ward_name || '—';
+  const minWard = features.find(f => f.properties.lst_mean === minLst)?.properties.ward_name || '—';
+
+  el.innerHTML = `
+    <div style="margin-bottom:8px;font-weight:600;font-size:13px;color:var(--accent)">${currentCity || 'Area'} — Analysis</div>
+    <div class="stat-line"><span class="sl">Average LST</span><span class="sv accent">${avgLst.toFixed(1)}°C</span></div>
+    <div class="stat-line"><span class="sl">Average NDVI</span><span class="sv success">${avgNdvi.toFixed(3)}</span></div>
+    <div class="stat-line"><span class="sl">Hottest ward</span><span class="sv danger">${maxWard} (${maxLst.toFixed(1)}°C)</span></div>
+    <div class="stat-line"><span class="sl">Coolest ward</span><span class="sv success">${minWard} (${minLst.toFixed(1)}°C)</span></div>
+    <div class="stat-line"><span class="sl">Temperature range</span><span class="sv">${(maxLst - minLst).toFixed(1)}°C</span></div>
+    <br>
+    <p style="font-size:11px;color:var(--muted);line-height:1.6">Urban heat islands are concentrated in areas with low vegetation (NDVI) and high built-up density. Prioritise green infrastructure in high-LST wards.</p>
+  `;
+
+  perEl.innerHTML = '<p style="color:var(--muted);font-size:11px">Click a ward on the map for per-cell details.</p>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  9. COMPARE
+// ═══════════════════════════════════════════════════════════════════════
+
+const compareCities = [];
+
+function renderCompare() {
+  const el = document.getElementById('comp-cities');
+  const cities = [];
+  if (cachedFeatures.heat?.features?.length) cities.push(currentCity);
+  el.innerHTML = cities.map(c =>
+    `<span class="cc ${compareCities.includes(c) ? 'active' : ''}" data-city="${c}">${c}</span>`
+  ).join('');
+  el.querySelectorAll('.cc').forEach(btn => {
+    btn.addEventListener('click', () => toggleCompareCity(btn.dataset.city));
+  });
+  drawCompareChart();
+}
+
+function toggleCompareCity(city) {
+  const idx = compareCities.indexOf(city);
+  if (idx > -1) compareCities.splice(idx, 1);
+  else compareCities.push(city);
+  renderCompare();
+}
+
+async function drawCompareChart() {
+  const el = document.getElementById('comp-chart');
+  const st = document.getElementById('comp-stats');
+  if (!compareCities.length) {
+    el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:11px">Select cities to compare</div>';
+    st.textContent = '';
+    return;
+  }
+  const data = await Promise.all(compareCities.map(c => api(`/api/stats?city=${encodeURIComponent(c)}`)));
+  const valid = data.filter(d => d && d.avg_lst != null);
+  if (!valid.length) {
+    el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:11px">No data available</div>';
+    st.textContent = '';
+    return;
+  }
+  const maxLst = Math.max(...valid.map(d => d.avg_lst));
+  el.innerHTML = valid.map((d, i) => `
+    <div style="position:absolute;bottom:20px;left:${(i + 0.5) / valid.length * 100}%;transform:translateX(-50%);text-align:center">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">${d.avg_lst}°</div>
+      <div style="width:36px;background:linear-gradient(180deg,#e94560,#f5a623);border-radius:4px 4px 0 0;height:${Math.max((d.avg_lst / maxLst) * 120, 4)}px;margin:0 auto;transition:height .6s cubic-bezier(.16,1,.3,1);box-shadow:0 2px 8px rgba(233,69,96,.2)"></div>
+      <div style="font-size:9px;color:var(--muted);margin-top:6px;font-weight:500">${compareCities[i]}</div>
+    </div>
+  `).join('');
+  st.innerHTML = valid.map((d, i) =>
+    `<div class="cs-line"><strong>${compareCities[i]}</strong>: Avg ${d.avg_lst}°C · NDVI ${d.avg_ndvi} · ${d.high_risk_wards} high risk</div>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  10. EXPORT & BOOKMARKS
+// ═══════════════════════════════════════════════════════════════════════
+
+function doExport(format) {
+  const data = cachedFeatures.heat;
+  if (!data || !data.features || !data.features.length) {
+    showToast('No data to export', 'error');
+    return;
+  }
+  let blob, ext;
+  if (format === 'geojson') {
+    blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    ext = 'geojson';
+  } else {
+    // FIXED: CSV export checks for ward_id existence (custom areas may not have it)
+    const hasWardId = data.features.some(f => f.properties.ward_id != null);
+    const headers = hasWardId
+      ? ['ward_id', 'ward_name', 'lst_mean', 'lst_min', 'lst_max', 'ndvi_mean', 'ndvi_min', 'ndvi_max']
+      : ['cell_id', 'lst_mean', 'lst_min', 'lst_max', 'ndvi_mean', 'ndvi_min', 'ndvi_max'];
+    const rows = data.features.map(f => {
+      const p = f.properties;
+      if (hasWardId) {
+        return `${p.ward_id},${p.ward_name || ''},${p.lst_mean ?? ''},${p.lst_min ?? ''},${p.lst_max ?? ''},${p.ndvi_mean ?? ''},${p.ndvi_min ?? ''},${p.ndvi_max ?? ''}`;
+      }
+      return `${p.cell_id || ''},${p.lst_mean ?? ''},${p.lst_min ?? ''},${p.lst_max ?? ''},${p.ndvi_mean ?? ''},${p.ndvi_min ?? ''},${p.ndvi_max ?? ''}`;
+    });
+    blob = new Blob([headers.join(',') + '\n' + rows.join('\n')], { type: 'text/csv' });
+    ext = 'csv';
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${currentCity || 'analysis'}.${ext}`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast(`Exported as ${ext.toUpperCase()}`, 'success');
+}
+
+function saveBookmark() {
+  const data = cachedFeatures.heat;
+  if (!data || !data.features || !data.features.length) {
+    showToast('No data to bookmark', 'error');
+    return;
+  }
+  const bm = JSON.parse(localStorage.getItem('hv_bookmarks') || '[]');
+  bm.push({ city: currentCity || 'Custom', date: new Date().toISOString(), data });
+  localStorage.setItem('hv_bookmarks', JSON.stringify(bm));
+  renderBookmarks();
+  showToast('Bookmark saved!', 'success');
+}
+
+function renderBookmarks() {
+  const el = document.getElementById('bm-list');
+  const bm = JSON.parse(localStorage.getItem('hv_bookmarks') || '[]');
+  if (!bm.length) {
+    el.innerHTML = '<p style="font-size:11px;color:var(--muted)">No saved bookmarks yet.</p>';
+    return;
+  }
+  el.innerHTML = bm.map((b, i) =>
+    `<div class="bm">
+      <span style="flex:1">${b.city} · ${new Date(b.date).toLocaleDateString()}</span>
+      <span style="display:flex;gap:4px;align-items:center">
+        <button class="load-btn" data-idx="${i}">Load</button>
+        <span class="del" data-idx="${i}">&times;</span>
+      </span>
+    </div>`
+  ).join('');
+  el.querySelectorAll('.load-btn').forEach(btn => {
+    btn.addEventListener('click', () => loadBookmark(parseInt(btn.dataset.idx)));
+  });
+  el.querySelectorAll('.del').forEach(btn => {
+    btn.addEventListener('click', () => delBookmark(parseInt(btn.dataset.idx)));
+  });
+}
+
+function loadBookmark(idx) {
+  const bm = JSON.parse(localStorage.getItem('hv_bookmarks') || '[]');
+  if (!bm[idx]) return;
+  cachedFeatures.heat = bm[idx].data;
+  isCustomArea = true;
+  renderLayer();
+  renderWardList();
+  showToast('Bookmark loaded', 'success');
+}
+
+function delBookmark(idx) {
+  const bm = JSON.parse(localStorage.getItem('hv_bookmarks') || '[]');
+  bm.splice(idx, 1);
+  localStorage.setItem('hv_bookmarks', JSON.stringify(bm));
+  renderBookmarks();
+  showToast('Bookmark deleted', 'info');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  11. UI HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+
+function showToast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function showShortcuts() {
+  document.getElementById('shortcuts-modal').classList.add('show');
+}
+function hideShortcuts() {
+  document.getElementById('shortcuts-modal').classList.remove('show');
+}
+
+const storySteps = [
+  { title: 'Welcome to HeatVision', body: 'Urban Heat Island Mapper helps you visualise land surface temperature, vegetation health, and heat risk across cities. Use the interactive map to explore urban heat patterns.' },
+  { title: 'Explore the Map', body: 'Browse the heat map. Warmer colours indicate hotter areas. Switch between <strong>Heat</strong>, <strong>Risk</strong>, and <strong>Hotspot</strong> layers using the buttons in the Wards panel.' },
+  { title: 'Analyse & Export', body: 'The side panel shows statistics, ward details, and AI-powered insights. Use <strong>Draw mode</strong> to analyse any area on the globe. Export data as GeoJSON or CSV.' },
+];
+
+let storyIdx = 0;
+
+function toggleStory() {
+  const ov = document.getElementById('story-overlay');
+  ov.classList.toggle('show');
+  if (ov.classList.contains('show')) showStoryStep(0);
+}
+
+function showStoryStep(i) {
+  storyIdx = i;
+  const s = storySteps[i];
+  document.getElementById('story-title').textContent = s.title;
+  document.getElementById('story-body').innerHTML = s.body;
+  document.getElementById('story-progress').textContent = `${i + 1}/${storySteps.length}`;
+  document.getElementById('story-prev').style.display = i > 0 ? 'inline-block' : 'none';
+  document.getElementById('story-next').textContent = i < storySteps.length - 1 ? 'Next →' : 'Done ✓';
+  document.getElementById('story-next').className = i < storySteps.length - 1 ? 'top-btn' : 'top-btn primary';
+}
+
+function hideStory() {
+  document.getElementById('story-overlay').classList.remove('show');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  12. EVENT BINDING
+// ═══════════════════════════════════════════════════════════════════════
+
+function initEvents() {
+  // City select
+  document.getElementById('city-select').addEventListener('change', onCityChange);
+
+  // Search
+  document.getElementById('search-input').addEventListener('input', onSearchInput);
+  document.getElementById('search-input').addEventListener('keydown', onSearchKeydown);
+
+  // Draw
+  document.getElementById('draw-btn').addEventListener('click', toggleDrawMode);
+
+  // Story
+  document.getElementById('story-btn').addEventListener('click', toggleStory);
+  document.getElementById('story-prev').addEventListener('click', () => showStoryStep(storyIdx - 1));
+  document.getElementById('story-next').addEventListener('click', () => {
+    if (storyIdx < storySteps.length - 1) showStoryStep(storyIdx + 1);
+    else hideStory();
+  });
+  document.getElementById('story-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) hideStory();
+  });
+
+  // Shortcuts
+  document.getElementById('shortcuts-btn').addEventListener('click', showShortcuts);
+  document.getElementById('shortcuts-close').addEventListener('click', hideShortcuts);
+  document.getElementById('shortcuts-modal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) hideShortcuts();
+  });
+
+  // Panel
+  document.getElementById('panel-toggle').addEventListener('click', togglePanel);
+  document.getElementById('sheet-close').addEventListener('click', togglePanel);
+
+  // Sheet tabs
+  document.querySelectorAll('.st').forEach(tab => {
+    tab.addEventListener('click', () => switchSheetTab(tab.dataset.tab));
+  });
+
+  // Layer buttons
+  document.querySelectorAll('.lb').forEach(btn => {
+    btn.addEventListener('click', () => switchLayer(btn.dataset.layer));
+  });
+
+  // Sort buttons
+  document.querySelectorAll('.sb').forEach(btn => {
+    btn.addEventListener('click', () => setSort(btn.dataset.sort));
+  });
+
+  // Grid slider
+  document.getElementById('grid-slider').addEventListener('input', onGridChange);
+  document.getElementById('ws').addEventListener('input', renderWardList);
+
+  // Export
+  document.getElementById('export-geojson').addEventListener('click', () => doExport('geojson'));
+  document.getElementById('export-csv').addEventListener('click', () => doExport('csv'));
+  document.getElementById('save-bookmark').addEventListener('click', saveBookmark);
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (e.key === '1') switchLayer('heat');
+    else if (e.key === '2') switchLayer('risk');
+    else if (e.key === '3') switchLayer('hotspot');
+    else if (e.key === 'd' || e.key === 'D') toggleDrawMode();
+    else if (e.key === 's' || e.key === 'S') document.getElementById('search-input').focus();
+    else if (e.key === 'f' || e.key === 'F') {
+      document.fullscreenElement ? document.exitFullscreen() : document.body.requestFullscreen();
+    }
+    else if (e.key === 'e' || e.key === 'E') togglePanel();
+    else if (e.key === 't' || e.key === 'T') toggleStory();
+    else if (e.key === '?') showShortcuts();
+    else if (e.key === 'Escape') {
+      hideShortcuts();
+      hideStory();
+      document.getElementById('search-results').style.display = 'none';
+      document.getElementById('search-input').blur();
+      if (drawMode) toggleDrawMode();
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  13. INIT
+// ═══════════════════════════════════════════════════════════════════════
+
+initSplashParticles();
+initGlobe();
+initEvents();
+
+// Auto-dismiss splash after 3.5s
+setTimeout(() => { if (!splashResolved) dismissSplash(); }, 3500);
+
+loadCities();
+renderBookmarks();
+</script>
+</body>
+</html>

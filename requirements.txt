@@ -1,0 +1,31 @@
+# Web framework & async server
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# Database
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+geoalchemy2==0.15.2
+psycopg2-binary==2.9.10
+
+# Settings & validation
+pydantic==2.10.3
+pydantic-settings==2.7.0
+
+# Geospatial
+geopandas==1.0.1
+rasterio==1.4.3
+shapely==2.0.6
+folium==0.19.4
+
+# Data & ML
+numpy==2.1.3
+pandas==2.2.3
+scikit-learn==1.6.0
+
+# Async task queue
+celery==5.4.0
+redis==5.2.1
+
+# HTTP (for downloading MODIS data)
+httpx==0.28.1

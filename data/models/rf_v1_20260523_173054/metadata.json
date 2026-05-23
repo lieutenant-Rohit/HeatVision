@@ -1,0 +1,18 @@
+{
+  "model_version": "rf_v1_20260523_173054",
+  "trained_at": "2026-05-23T17:30:54.613249",
+  "n_samples": 400,
+  "n_features": 5,
+  "feature_names": [
+    "ndvi_mean",
+    "ndvi_min",
+    "ndvi_max",
+    "ndvi_std",
+    "ndvi_range"
+  ],
+  "test_r2": 0.9702,
+  "test_mae": 0.1832,
+  "test_rmse": 0.3188,
+  "lst_mean": 30.864826579093933,
+  "lst_std": 2.1497878342265553
+}
