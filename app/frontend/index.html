@@ -38,29 +38,78 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubunt
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 @keyframes cardIn{from{opacity:0;transform:translateY(12px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes borderGlow{0%,100%{border-color:rgba(240,136,62,.3);box-shadow:0 0 12px rgba(240,136,62,.1)}50%{border-color:rgba(240,136,62,.7);box-shadow:0 0 24px rgba(240,136,62,.25)}}
+@keyframes ripple{to{transform:scale(4);opacity:0}}
+@keyframes press{0%{transform:scale(1)}40%{transform:scale(.96)}100%{transform:scale(1)}}
+@keyframes tileReveal{from{opacity:0;filter:saturate(0) brightness(.6)}to{opacity:1;filter:saturate(1) brightness(1)}}
+@keyframes listItem{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+@keyframes cursorPulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes typeCursor{0%,100%{border-right-color:var(--accent)}50%{border-right-color:transparent}}
+@keyframes swing{0%,100%{transform:rotate(0deg)}25%{transform:rotate(8deg)}75%{transform:rotate(-8deg)}}
 
 /* ─── SPLASH ─── */
 #splash{position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s ease}
-#splash::before{content:'';position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:1}
+#splash::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(233,69,96,.08) 0%,rgba(8,11,18,.9) 60%,#000 100%);z-index:1}
 #splash.hidden{opacity:0;pointer-events:none}
 
-#splash-inner{position:relative;display:flex;flex-direction:column;align-items:center;gap:20px}
+/* Floating particles */
+#splash-particles{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none}
+#splash-particles i{position:absolute;display:block;width:3px;height:3px;border-radius:50%;animation:particleFloat linear infinite;box-shadow:0 0 4px currentColor}
+#splash-particles i:nth-child(1){left:10%;top:20%;animation-duration:8s;animation-delay:0s;color:rgba(255,255,255,.5);background:rgba(255,255,255,.5)}
+#splash-particles i:nth-child(2){left:25%;top:60%;animation-duration:11s;animation-delay:1s;width:4px;height:4px;color:rgba(240,136,62,.6);background:rgba(240,136,62,.6)}
+#splash-particles i:nth-child(3){left:45%;top:10%;animation-duration:9s;animation-delay:0.5s;width:2px;height:2px;color:rgba(255,255,255,.4);background:rgba(255,255,255,.4)}
+#splash-particles i:nth-child(4){left:65%;top:70%;animation-duration:12s;animation-delay:2s;width:3px;height:3px;color:rgba(233,69,96,.5);background:rgba(233,69,96,.5)}
+#splash-particles i:nth-child(5){left:80%;top:30%;animation-duration:7s;animation-delay:1.5s;width:2px;height:2px;color:rgba(255,255,255,.35);background:rgba(255,255,255,.35)}
+#splash-particles i:nth-child(6){left:15%;top:80%;animation-duration:10s;animation-delay:0.8s;width:3px;height:3px;color:rgba(255,255,255,.45);background:rgba(255,255,255,.45)}
+#splash-particles i:nth-child(7){left:50%;top:40%;animation-duration:13s;animation-delay:0.3s;width:5px;height:5px;color:rgba(240,136,62,.7);background:rgba(240,136,62,.7)}
+#splash-particles i:nth-child(8){left:90%;top:15%;animation-duration:9s;animation-delay:2.5s;width:2px;height:2px;color:rgba(255,255,255,.3);background:rgba(255,255,255,.3)}
+#splash-particles i:nth-child(9){left:35%;top:50%;animation-duration:11s;animation-delay:1.2s;width:4px;height:4px;color:rgba(233,69,96,.55);background:rgba(233,69,96,.55)}
+#splash-particles i:nth-child(10){left:70%;top:85%;animation-duration:8s;animation-delay:0.6s;width:2px;height:2px;color:rgba(255,255,255,.35);background:rgba(255,255,255,.35)}
+#splash-particles i:nth-child(11){left:5%;top:45%;animation-duration:10s;animation-delay:1.8s;width:3px;height:3px;color:rgba(255,255,255,.4);background:rgba(255,255,255,.4)}
+#splash-particles i:nth-child(12){left:55%;top:90%;animation-duration:12s;animation-delay:0.1s;width:4px;height:4px;color:rgba(240,136,62,.5);background:rgba(240,136,62,.5)}
+@keyframes particleFloat{0%{transform:translateY(0) scale(1);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-120vh) scale(.5);opacity:0}}
 
-#splash-logo{font-size:clamp(36px,7vw,72px);font-weight:800;letter-spacing:4px;background:linear-gradient(135deg,#f0883e 0%,#e94560 40%,#ff6b6b 70%,#f0883e 100%);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;opacity:0;animation:logoIn 1.5s cubic-bezier(.16,1,.3,1) .6s forwards;filter:drop-shadow(0 0 20px rgba(233,69,96,.2));}
-/* Removed continuous shimmer animation to reduce GPU load */
-/* Optional: Add a subtle pulse instead if needed */
-#splash-logo::after{
-  content:'';
-  position:absolute;
-  inset:0;
-  background:radial-gradient(circle at center, transparent 0%, rgba(255,255,255,0.1) 70%);
-  opacity:0;
-  animation:splash-pulse 2s ease-in-out infinite;
-  pointer-events:none;
-}
-#splash-sub{font-size:clamp(10px,1.2vw,14px);color:rgba(255,255,255,.6);letter-spacing:8px;font-weight:200;text-transform:uppercase;opacity:0;animation:subIn .8s ease 1.8s forwards}
-#splash-loader{position:absolute;bottom:30vh;width:160px;height:2px;background:rgba(255,255,255,.04);border-radius:4px;overflow:hidden;z-index:2;opacity:0;animation:loadFade .6s ease 2.4s forwards}
-#splash-loader .fill{height:100%;width:0%;background:linear-gradient(90deg,transparent,var(--accent) 30%,var(--accent2) 70%,transparent);background-size:200% 100%;border-radius:4px;animation:loadBar 1s cubic-bezier(.16,1,.3,1) 2.4s forwards}
+#splash-inner{position:relative;display:flex;flex-direction:column;align-items:center;gap:16px;z-index:2}
+
+/* Decorative rings behind logo */
+#splash-rings{position:absolute;width:clamp(140px,24vw,280px);height:clamp(140px,24vw,280px);pointer-events:none;opacity:0;animation:logoIn 1.5s cubic-bezier(.16,1,.3,1) .3s forwards,ringBreathe 5s ease-in-out 2s infinite}
+#splash-rings .r{position:absolute;inset:0;border-radius:50%;border:1px solid;opacity:0;animation:ringFadeIn 1s ease forwards,ringSpin 30s linear infinite}
+#splash-rings .r1{inset:0;border-color:rgba(233,69,96,.15);animation-delay:.3s,0s}
+#splash-rings .r2{inset:-18px;border-color:rgba(240,136,62,.1);animation-delay:.5s,0s;border-style:dashed;animation-name:ringFadeIn,ringSpinReverse;animation-duration:1s,35s}
+#splash-rings .r3{inset:18px;border-color:rgba(255,255,255,.08);animation-delay:.4s,0s;animation-name:ringFadeIn,ringSpin;animation-duration:1s,25s}
+#splash-rings .r4{inset:-36px;border-color:rgba(233,69,96,.06);animation-delay:.6s,0s;animation-name:ringFadeIn,ringSpin;animation-duration:1s,20s}
+/* Scanning glow arc on outer ring */
+#splash-rings .r4::after{content:'';position:absolute;inset:-2px;border-radius:50%;background:conic-gradient(from 180deg,transparent 0deg,transparent 310deg,rgba(233,69,96,.35) 325deg,rgba(240,136,62,.5) 340deg,rgba(233,69,96,.25) 355deg,transparent 10deg,transparent 360deg);-webkit-mask:radial-gradient(circle at center,transparent 66.5%,#000 66.5%,#000 68%,transparent 68%);mask:radial-gradient(circle at center,transparent 66.5%,#000 66.5%,#000 68%,transparent 68%);animation:ringSpin 2.5s linear infinite;opacity:0;animation:ringSpin 2.5s linear infinite,ringFadeIn 1s ease .8s forwards}
+/* Orbiting dots */
+#splash-rings .dot{position:absolute;width:5px;height:5px;border-radius:50%;left:50%;top:50%;margin:-2.5px 0 0 -2.5px;opacity:0;animation:ringFadeIn 1s ease 1s forwards}
+#splash-rings .dot1{background:#e94560;box-shadow:0 0 10px #e94560,0 0 20px rgba(233,69,96,.3);animation:ringFadeIn 1s ease 1s forwards,orbit1 4s linear 1s infinite}
+#splash-rings .dot2{background:#f0883e;box-shadow:0 0 8px #f0883e;width:4px;height:4px;margin:-2px 0 0 -2px;animation:ringFadeIn 1s ease 1.2s forwards,orbit2 6s linear 1.2s infinite}
+#splash-rings .dot3{background:#ff6b6b;box-shadow:0 0 6px #ff6b6b;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;animation:ringFadeIn 1s ease 1.4s forwards,orbit3 8s linear 1.4s infinite}
+/* Central glow bloom */
+#splash-rings::before{content:'';position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at center,rgba(233,69,96,.06) 0%,rgba(240,136,62,.03) 30%,transparent 60%);animation:logoIn 1.5s cubic-bezier(.16,1,.3,1) .5s forwards;opacity:0}
+@keyframes ringFadeIn{0%{opacity:0;transform:scale(.8)}100%{opacity:1;transform:scale(1)}}
+@keyframes ringSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+@keyframes ringSpinReverse{0%{transform:rotate(0deg)}100%{transform:rotate(-360deg)}}
+@keyframes ringBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+@keyframes orbit1{0%{transform:rotate(0deg) translateY(calc(clamp(-70px,-12vw,-140px)))}100%{transform:rotate(360deg) translateY(calc(clamp(-70px,-12vw,-140px)))}}
+@keyframes orbit2{0%{transform:rotate(120deg) translateY(calc(clamp(-72px,-12.5vw,-145px)))}100%{transform:rotate(480deg) translateY(calc(clamp(-72px,-12.5vw,-145px)))}}
+@keyframes orbit3{0%{transform:rotate(240deg) translateY(calc(clamp(-74px,-13vw,-150px)))}100%{transform:rotate(600deg) translateY(calc(clamp(-74px,-13vw,-150px)))}}
+
+
+#splash-logo{font-size:clamp(42px,8vw,80px);font-weight:800;letter-spacing:6px;background:linear-gradient(135deg,#f0883e 0%,#e94560 35%,#ff6b6b 65%,#f0883e 100%);background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;opacity:0;animation:logoIn 1.5s cubic-bezier(.16,1,.3,1) .6s forwards,shimmer 6s linear .6s infinite;filter:drop-shadow(0 0 30px rgba(233,69,96,.3));position:relative}
+#splash-logo::after{content:'';position:absolute;inset:-10px;background:radial-gradient(ellipse at center,rgba(233,69,96,.12) 0%,transparent 70%);opacity:0;animation:logoIn 1.5s cubic-bezier(.16,1,.3,1) .8s forwards;pointer-events:none;z-index:-1}
+
+#splash-divider{width:40px;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;animation:subIn .6s ease 1.6s forwards}
+
+#splash-sub{font-size:clamp(10px,1.2vw,14px);color:rgba(255,255,255,.5);letter-spacing:10px;font-weight:200;text-transform:uppercase;opacity:0;animation:subIn .8s ease 1.8s forwards}
+
+#splash-tagline{font-size:clamp(9px,1vw,12px);color:rgba(255,255,255,.25);letter-spacing:2px;font-weight:300;opacity:0;animation:subIn .8s ease 2s forwards}
+
+#splash-loader{position:absolute;bottom:28vh;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:2;opacity:0;animation:loadFade .6s ease 2.4s forwards}
+#splash-loader .bar-wrap{width:180px;height:3px;background:rgba(255,255,255,.04);border-radius:4px;overflow:hidden}
+#splash-loader .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent) 0%,var(--accent2) 50%,#ff6b6b 100%);background-size:200% 100%;border-radius:4px;animation:loadBar 1.2s cubic-bezier(.16,1,.3,1) 2.4s forwards}
+#splash-loader .label{font-size:9px;color:rgba(255,255,255,.2);letter-spacing:4px;font-weight:300;text-transform:uppercase}
+
+#splash-version{position:absolute;bottom:24px;z-index:2;font-size:9px;color:rgba(255,255,255,.1);letter-spacing:2px;font-weight:300;opacity:0;animation:loadFade .6s ease 2.8s forwards}
 
 /* Enhanced globe animation additions */
 #globe-canvas{
@@ -88,10 +137,6 @@ body.globe-loaded #globe-canvas{
   transition:opacity 1.5s ease, transform 1.5s ease;
 }
 
-/* ─── SPLASH LOGO ENHANCED ─── */
-#splash-logo{position:relative}
-#splash-logo::before{content:'';position:absolute;inset:-30px;background:radial-gradient(circle at center,rgba(233,69,96,.15) 0%,transparent 70%);opacity:0;animation:logoIn 1.5s cubic-bezier(.16,1,.3,1) .6s forwards;pointer-events:none;z-index:-1}
-
 /* ─── TOP BAR ─── */
 #top-bar{position:fixed;top:0;left:0;right:0;z-index:1000;padding:10px 16px;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,rgba(8,11,18,.97) 60%,transparent);transition:transform .5s cubic-bezier(.16,1,.3,1);transform:translateY(-100%)}
 body.dashboard-loaded #top-bar{transform:translateY(0)}
@@ -117,13 +162,16 @@ body.dashboard-loaded #top-bar>:nth-child(4){animation-delay:280ms}
 #search-results .r:hover{background:var(--bg4)}
 #search-results .r .s{font-size:10px;color:var(--muted)}
 .top-actions{display:flex;gap:6px;margin-left:auto;align-items:center}
-.top-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:11px;transition:all .2s;white-space:nowrap;display:flex;align-items:center;gap:6px;font-weight:500}
+.top-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:11px;white-space:nowrap;display:flex;align-items:center;gap:6px;font-weight:500;position:relative;overflow:hidden;transition:background .2s,color .2s,border-color .2s,box-shadow .2s;user-select:none;-webkit-tap-highlight-color:transparent}
+.top-btn:active{animation:press .25s cubic-bezier(.16,1,.3,1)}
 .top-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--muted)}
+/* Ripple effect */
+.top-btn .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.15);transform:scale(0);animation:ripple .6s ease-out;pointer-events:none}
 .top-btn.primary{background:linear-gradient(135deg,#d63850,var(--accent2));border-color:var(--accent2);color:#fff;box-shadow:0 2px 8px rgba(233,69,96,.2);background-size:200% 100%;animation:shimmer 4s linear infinite}
 .top-btn.primary:hover{box-shadow:0 4px 16px rgba(233,69,96,.3);transform:translateY(-1px)}
 .top-btn.primary.active{background:linear-gradient(135deg,var(--success),#16a34a);border-color:var(--success);box-shadow:0 2px 8px rgba(34,197,94,.2);animation:glow-pulse 2s ease-in-out infinite}
 .top-btn-icon{padding:6px 10px;font-size:15px;line-height:1}
-.top-badge{position:relative}
+.top-badge{position:relative;animation:swing 4s ease-in-out infinite}
 .top-badge::after{content:'';position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:pulse 2s infinite}
 
 /* ─── MAP ─── */
@@ -133,17 +181,9 @@ body.dashboard-loaded #top-bar>:nth-child(4){animation-delay:280ms}
 #draw-hint #dh-text{position:relative;z-index:1}
 #draw-hint .k{background:var(--bg4);padding:2px 6px;border-radius:4px;font-size:10px;font-family:monospace;color:var(--muted)}
 .leaflet-draw.leaflet-control{margin-top:60px}
-.leaflet-draw .leaflet-draw-section .leaflet-draw-toolbar a{background:var(--bg3)!important;color:var(--text)!important;border-color:var(--border)!important;background-image:none!important;display:flex!important;align-items:center;justify-content:center;font-size:14px;transition:all .2s!important}
-.leaflet-draw .leaflet-draw-section .leaflet-draw-toolbar a:hover{background:var(--bg4)!important;border-color:var(--accent)!important}
-.leaflet-draw .leaflet-draw-section .leaflet-draw-toolbar a.leaflet-draw-draw-rectangle::before{content:'▭';font-size:16px;line-height:1}
-.leaflet-draw .leaflet-draw-section .leaflet-draw-toolbar a.leaflet-draw-draw-rectangle{background:var(--bg3)!important}
-.leaflet-draw a{background-image:none!important}
-.leaflet-draw a.leaflet-draw-draw-rectangle{background:var(--bg3)!important;border-radius:4px!important}
-.leaflet-draw a.leaflet-draw-draw-rectangle:hover{background:var(--bg4)!important}
-.leaflet-draw .leaflet-draw-toolbar .leaflet-draw-toolbar-button-enabled{background:var(--accent2)!important}
-.leaflet-draw-toolbar .leaflet-draw-toolbar-button-enabled{background:var(--accent2)!important}
-.leaflet-draw-toolbar a{margin-bottom:3px!important;border-radius:6px!important;overflow:hidden}
-.leaflet-retina .leaflet-draw-toolbar a{background-size:auto!important}
+.draw-active .leaflet-container{cursor:crosshair!important}
+.draw-active .leaflet-container::after{content:'';position:fixed;inset:0;z-index:999;border:2px solid rgba(240,136,62,.08);pointer-events:none;animation:borderGlow 2.5s ease-in-out infinite}
+
 .leaflet-popup-content-wrapper{border-radius:var(--radius);background:var(--glass);color:var(--text);box-shadow:var(--shadow);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border)}
 .leaflet-popup-tip{background:var(--bg2)}
 .leaflet-popup-content{margin:12px 16px;font-size:12px;line-height:1.6}
@@ -156,6 +196,8 @@ body.dashboard-loaded #top-bar>:nth-child(4){animation-delay:280ms}
 .leaflet-control-zoom a{background:var(--bg3)!important;color:var(--text)!important;border-color:var(--border)!important}
 .leaflet-control-zoom a:hover{background:var(--bg4)!important}
 .leaflet-overlay-pane path{transition:opacity .25s ease, fill-opacity .25s ease}
+.leaflet-tile-pane .leaflet-tile{animation:tileReveal .4s ease both}
+.leaflet-tile-pane .leaflet-tile-loaded{animation:tileReveal .4s ease both}
 
 /* ─── SIDE PANEL ─── */
 #panel-toggle{position:fixed;right:10px;top:62px;z-index:901;background:var(--glass);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:14px;transition:right .4s cubic-bezier(.16,1,.3,1),background .2s;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);opacity:0}
@@ -237,7 +279,7 @@ body.dashboard-loaded #top-bar>:nth-child(4){animation-delay:280ms}
 .sb.active{background:var(--bg4);color:var(--text);border-color:var(--accent)}
 .sb:hover{background:var(--bg4)}
 #wl{font-size:11px;max-height:320px;overflow-y:auto;border-radius:var(--radius);border:1px solid var(--border)}
-#wl .wr{padding:7px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all .2s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden}
+#wl .wr{padding:7px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all .2s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden;animation:listItem .35s ease both}
 #wl .wr:last-child{border-bottom:none}
 #wl .wr::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent);transform:scaleY(0);transition:transform .2s cubic-bezier(.16,1,.3,1)}
 #wl .wr:hover{background:var(--bg4);padding-left:14px}
@@ -339,11 +381,29 @@ body.dashboard-loaded #top-bar>:nth-child(4){animation-delay:280ms}
 
 <!-- ═══ SPLASH ═══ -->
 <div id="splash">
-  <div id="splash-inner">
-    <div id="splash-logo">HeatVision</div>
-    <div id="splash-sub">Urban Heat Island Mapping</div>
+  <div id="splash-particles">
+    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
   </div>
-  <div id="splash-loader"><div class="fill"></div></div>
+  <div id="splash-inner">
+    <div id="splash-rings">
+      <div class="r r1"></div>
+      <div class="r r2"></div>
+      <div class="r r3"></div>
+      <div class="r r4"></div>
+      <div class="dot dot1"></div>
+      <div class="dot dot2"></div>
+      <div class="dot dot3"></div>
+    </div>
+    <div id="splash-logo">HeatVision</div>
+    <div id="splash-divider"></div>
+    <div id="splash-sub">Urban Heat Island Mapping</div>
+    <div id="splash-tagline">Explore · Analyse · Act</div>
+  </div>
+  <div id="splash-loader">
+    <div class="bar-wrap"><div class="fill"></div></div>
+    <span class="label">Loading</span>
+  </div>
+  <div id="splash-version">v0.1.0</div>
 </div>
 
 <!-- ═══ THREE.JS GLOBE ═══ -->
@@ -394,6 +454,7 @@ body.dashboard-loaded #top-bar>:nth-child(4){animation-delay:280ms}
       <button class="st" data-tab="insight">Insight</button>
       <button class="st" data-tab="compare">Compare</button>
       <button class="st" data-tab="export">Export</button>
+      <button class="st" data-tab="simulate">Simulate</button>
     </div>
     <div id="sheet-content">
       <!-- Stats Tab -->
@@ -475,6 +536,58 @@ body.dashboard-loaded #top-bar>:nth-child(4){animation-delay:280ms}
           <button class="top-btn" id="save-bookmark">Save Bookmark</button>
         </div>
         <div id="bm-list"></div>
+      </div>
+
+      <!-- Simulate Tab -->
+      <div class="sc-tab" id="tab-simulate">
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">What-If Simulation — adjust variables to see predicted impact on heat risk.</p>
+        <div style="margin-bottom:10px">
+          <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px">Select ward / cell:</label>
+          <select id="sim-ward" style="width:100%;background:var(--bg3);color:var(--text);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:11px;outline:none"><option value="">—</option></select>
+        </div>
+        <div id="sim-current" style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.7;padding:8px 10px;background:var(--bg3);border-radius:6px;border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between"><span>LST</span><span id="sim-cur-lst">—</span></div>
+          <div style="display:flex;justify-content:space-between"><span>NDVI</span><span id="sim-cur-ndvi">—</span></div>
+          <div style="display:flex;justify-content:space-between"><span>Risk</span><span id="sim-cur-risk">—</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:2px"><span>🌳 Add green cover</span><span id="sim-val-green" style="color:var(--success);font-weight:600">0%</span></div>
+            <input type="range" id="sim-green" min="0" max="50" value="0" style="width:100%;accent-color:var(--success);height:3px;cursor:pointer">
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:2px"><span>🏠 Cool roofs</span><span id="sim-val-roof" style="color:var(--accent);font-weight:600">0%</span></div>
+            <input type="range" id="sim-roof" min="0" max="50" value="0" style="width:100%;accent-color:var(--accent);height:3px;cursor:pointer">
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:2px"><span>🚗 Reduce traffic</span><span id="sim-val-traffic" style="color:var(--blue);font-weight:600">0%</span></div>
+            <input type="range" id="sim-traffic" min="0" max="50" value="0" style="width:100%;accent-color:var(--blue);height:3px;cursor:pointer">
+          </div>
+        </div>
+        <div id="sim-result" style="background:var(--bg3);border-radius:var(--radius);padding:12px;border:1px solid var(--border);border-left:3px solid var(--accent)">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:6px;font-weight:500;letter-spacing:.5px;text-transform:uppercase">Predicted Impact</div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>New LST</span><span id="sim-new-lst" style="font-weight:600;color:var(--accent)">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>New NDVI</span><span id="sim-new-ndvi" style="font-weight:600;color:var(--success)">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>New Risk</span><span id="sim-new-risk" style="font-weight:600">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>LST reduction</span><span id="sim-reduction" style="font-weight:600;color:var(--success)">—</span></div>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Risk Comparison</div>
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
+              <span style="font-size:9px;color:var(--muted);width:28px">Current</span>
+              <div style="flex:1;height:10px;background:var(--bg4);border-radius:5px;overflow:hidden">
+                <div id="sim-cur-bar" style="height:100%;width:0%;border-radius:5px;transition:width .2s ease"></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px">
+              <span style="font-size:9px;color:var(--muted);width:28px">New</span>
+              <div style="flex:1;height:10px;background:var(--bg4);border-radius:5px;overflow:hidden">
+                <div id="sim-new-bar" style="height:100%;width:0%;border-radius:5px;transition:width .2s ease"></div>
+              </div>
+            </div>
+          </div>
+          <div id="sim-recommend" style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.5;padding-top:8px;border-top:1px solid var(--border)">Adjust the sliders above to see the predicted effect of urban cooling interventions.</div>
+          <button id="sim-reset" style="width:100%;margin-top:10px;padding:6px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--text)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">Reset Simulation</button>
+        </div>
       </div>
     </div>
   </div>
@@ -874,8 +987,9 @@ async function onCityChange() {
     document.getElementById('panel-hint').textContent = 'Explore the World';
     clearMapLayers();
     renderWardList();
+    populateWardSelect();
     renderCompare();
-    document.getElementById('insight-text').textContent = '🌍 Draw a rectangle on the map to analyze any area in the world.';
+    window.typewriter(document.getElementById('insight-text'), '🌍 Draw a rectangle on the map to analyze any area in the world.', 12);
     map.setView([20, 0], 2);
     if (!drawMode) toggleDrawMode(true);
     return;
@@ -900,6 +1014,7 @@ async function loadMapData() {
   cachedFeatures = { wards, heat, predictions, equity };
   renderLayer();
   renderWardList();
+  populateWardSelect();
   renderCompare();
 }
 
@@ -973,7 +1088,8 @@ function generateInsight(s) {
   }
   const risk = s.high_risk_wards > s.medium_risk_wards ? 'elevated' : 'moderate';
   const green = s.avg_ndvi > 0.3 ? 'adequate' : 'low';
-  el.innerHTML = `${currentCity} shows <em>${risk}</em> heat risk with an average LST of <em>${s.avg_lst}°C</em>. NDVI of <em>${s.avg_ndvi}</em> indicates <em>${green}</em> vegetation cover. <em>${s.high_risk_wards}</em> wards require urgent intervention.`;
+  const text = `${currentCity} shows ${risk} heat risk with an average LST of ${s.avg_lst}°C. NDVI of ${s.avg_ndvi} indicates ${green} vegetation cover. ${s.high_risk_wards} wards require urgent intervention.`;
+  window.typewriter(el, text, 18);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1084,6 +1200,7 @@ function showPopup(f, l) {
     <span style="color:var(--muted)">(${p.ndvi_min != null ? p.ndvi_min : '—'}–${p.ndvi_max != null ? p.ndvi_max : '—'})</span><br>
     <b>Ratio</b>: ${p.heat_ndvi_ratio != null ? p.heat_ndvi_ratio.toFixed(2) : '—'}
   `).openPopup();
+  showCellAnalysis(f);
 }
 
 function showRiskPopup(f, l) {
@@ -1095,6 +1212,7 @@ function showRiskPopup(f, l) {
     <b>Score</b>: ${p.risk_score != null ? p.risk_score.toFixed(3) : '—'}<br>
     <b>Model</b>: ${p.model_version || '—'}
   `).openPopup();
+  showCellAnalysis(f);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1240,6 +1358,7 @@ function onSearchKeydown(e) {
 
 function toggleDrawMode(quiet) {
   drawMode = !drawMode;
+  document.body.classList.toggle('draw-active', drawMode);
   document.getElementById('draw-btn').classList.toggle('active', drawMode);
   document.getElementById('draw-hint').style.display = drawMode ? 'flex' : 'none';
   if (drawMode) enableDraw();
@@ -1290,8 +1409,9 @@ async function onDrawCreated(e) {
     document.getElementById('panel-hint').textContent = data.stats?.source || 'Analyzed';
     renderLayer();
     renderWardList();
+    populateWardSelect();
     if (data.insight) {
-      document.getElementById('insight-text').textContent = data.insight;
+      window.typewriter(document.getElementById('insight-text'), data.insight, 15);
     } else {
       renderFullInsight();
     }
@@ -1360,6 +1480,148 @@ function renderFullInsight() {
   `;
 
   perEl.innerHTML = '<p style="color:var(--muted);font-size:11px">Click a ward on the map for per-cell details.</p>';
+}
+
+function showCellAnalysis(f) {
+  const el = document.getElementById('insight-per-cell');
+  const p = f.properties;
+
+  const cityData = cachedFeatures.heat;
+  if (!cityData || !cityData.features) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:11px">City data not loaded.</p>';
+    return;
+  }
+
+  // Compute city-wide stats for comparison
+  const lsts = cityData.features.map(f => f.properties.lst_mean).filter(v => v != null);
+  const ndvis = cityData.features.map(f => f.properties.ndvi_mean).filter(v => v != null);
+  const avgLst = lsts.length ? lsts.reduce((a, b) => a + b, 0) / lsts.length : null;
+  const avgNdvi = ndvis.length ? ndvis.reduce((a, b) => a + b, 0) / ndvis.length : null;
+  const maxLst = lsts.length ? Math.max(...lsts) : null;
+  const minLst = lsts.length ? Math.min(...lsts) : null;
+
+  // Get risk info from predictions
+  let riskScore = null, riskCat = null;
+  const preds = cachedFeatures.predictions;
+  if (preds) {
+    const rp = preds.features.find(rf => rf.properties.ward_id === p.ward_id);
+    if (rp) { riskScore = rp.properties.risk_score; riskCat = rp.properties.risk_category; }
+  }
+
+  const lst = p.lst_mean;
+  const ndvi = p.ndvi_mean;
+  const name = p.ward_name || 'Area ' + (p.ward_id || '');
+  const badges = { high: '<span style="color:#e94560;font-weight:600">High</span>', medium: '<span style="color:#f0883e;font-weight:600">Medium</span>', low: '<span style="color:#22c55e;font-weight:600">Low</span>' };
+
+  // Percentile rank for LST (0=lowest, 1=highest)
+  const lstRank = avgLst != null && lst != null
+    ? lsts.filter(v => v <= lst).length / lsts.length : null;
+  const ndviRank = avgNdvi != null && ndvi != null
+    ? ndvis.filter(v => v <= ndvi).length / ndvis.length : null;
+
+  // Temperature classification
+  const tempClass = lst != null && avgLst != null
+    ? (lst > avgLst + 3 ? '🔴 Extremely hot' : lst > avgLst + 1 ? '🟠 Above average' : lst < avgLst - 3 ? '🔵 Very cool' : lst < avgLst - 1 ? '🟢 Below average' : '⚪ Near average')
+    : '—';
+
+  const vegClass = ndvi != null && avgNdvi != null
+    ? (ndvi < avgNdvi - 0.05 ? '🔴 Very sparse' : ndvi < avgNdvi - 0.02 ? '🟠 Below average' : ndvi > avgNdvi + 0.05 ? '🟢 Very dense' : ndvi > avgNdvi + 0.02 ? '🔵 Above average' : '⚪ Near average')
+    : '—';
+
+  // Factor analysis
+  const factors = [];
+  if (lst != null && avgLst != null) {
+    const lstDelta = lst - avgLst;
+    factors.push({ label: 'LST deviation', val: (lstDelta > 0 ? '+' : '') + lstDelta.toFixed(1) + '°C', flag: lstDelta > 1 ? 'high' : lstDelta < -1 ? 'low' : 'neutral' });
+  }
+  if (ndvi != null && avgNdvi != null) {
+    const ndviDelta = ndvi - avgNdvi;
+    factors.push({ label: 'NDVI deviation', val: (ndviDelta > 0 ? '+' : '') + ndviDelta.toFixed(3), flag: ndviDelta < -0.02 ? 'high' : ndviDelta > 0.02 ? 'low' : 'neutral' });
+  }
+  if (riskScore != null) {
+    factors.push({ label: 'Risk score', val: riskScore.toFixed(3), flag: riskScore > 0.66 ? 'high' : riskScore > 0.33 ? 'medium' : 'low' });
+  }
+
+  // Recommendations
+  const recs = [];
+  if (lst != null && avgLst != null && lst > avgLst + 1) {
+    const severity = lst > avgLst + 3 ? 'Critical' : 'High';
+    recs.push(`${severity} heat — ${lst > avgLst + 3 ? 'immediate' : 'prioritise'} tree planting, cool roofs, and shade infrastructure.`);
+  }
+  if (ndvi != null && avgNdvi != null && ndvi < avgNdvi - 0.02) {
+    recs.push(`Low vegetation cover — increase green spaces, vertical gardens, and tree canopy in this ward.`);
+  }
+  if (lst != null && ndvi != null && lst > 40 && ndvi < 0.2) {
+    recs.push(`Extreme urban heat island — combine reflective pavements with intensive greening for maximum cooling.`);
+  }
+  if (recs.length === 0) {
+    recs.push(`This ward has favourable thermal conditions. Maintain existing green cover and monitor for changes.`);
+  }
+
+  // Find most similar wards (within ±0.5°C LST and ±0.02 NDVI)
+  const similar = cityData.features
+    .filter(cf => cf.properties.ward_id !== p.ward_id && cf.properties.lst_mean != null && cf.properties.ndvi_mean != null)
+    .map(cf => ({ name: cf.properties.ward_name || cf.properties.ward_id, lst: cf.properties.lst_mean, ndvi: cf.properties.ndvi_mean, diff: Math.abs(cf.properties.lst_mean - lst) + Math.abs(cf.properties.ndvi_mean - ndvi) * 20 }))
+    .sort((a, b) => a.diff - b.diff)
+    .slice(0, 3);
+
+  const flagColor = { high: 'var(--accent2)', medium: 'var(--accent)', low: 'var(--success)', neutral: 'var(--muted)' };
+
+  el.innerHTML = `
+    <div style="background:var(--bg3);border-radius:var(--radius);padding:12px;border:1px solid var(--border);margin-bottom:8px;animation:slideUp .3s ease both">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">${name}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+        <div style="background:var(--bg4);border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">LST</div>
+          <div style="font-size:16px;font-weight:700;color:var(--accent)">${lst != null ? lst.toFixed(1) + '°' : '—'}</div>
+          <div style="font-size:9px;color:var(--muted)">avg ${avgLst != null ? avgLst.toFixed(1) + '°' : '—'}</div>
+        </div>
+        <div style="background:var(--bg4);border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">NDVI</div>
+          <div style="font-size:16px;font-weight:700;color:var(--success)">${ndvi != null ? ndvi.toFixed(3) : '—'}</div>
+          <div style="font-size:9px;color:var(--muted)">avg ${avgNdvi != null ? avgNdvi.toFixed(3) : '—'}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px">
+        <div style="font-size:10px;color:var(--muted);background:var(--bg4);padding:6px 8px;border-radius:4px">
+          <span style="color:var(--muted);display:block;margin-bottom:1px">Temperature</span>
+          <span style="font-weight:600;color:var(--text)">${tempClass}</span>
+        </div>
+        <div style="font-size:10px;color:var(--muted);background:var(--bg4);padding:6px 8px;border-radius:4px">
+          <span style="color:var(--muted);display:block;margin-bottom:1px">Vegetation</span>
+          <span style="font-weight:600;color:var(--text)">${vegClass}</span>
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Key Factors</div>
+        ${factors.map(f => {
+          const flag = f.flag === 'high' ? '▲' : f.flag === 'low' ? '▼' : '—';
+          const col = flagColor[f.flag] || 'var(--muted)';
+          return `<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0"><span style="color:var(--muted)">${f.label}</span><span style="font-weight:600;color:${col}">${flag} ${f.val}</span></div>`;
+        }).join('')}
+      </div>
+      <div style="margin-bottom:10px;padding:8px 10px;background:var(--bg4);border-radius:6px;border-left:2px solid var(--accent)">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">AI Recommendation</div>
+        <div style="font-size:11px;line-height:1.6;color:var(--text)">${recs.join('<br>')}</div>
+      </div>
+      ${similar.length > 0 ? `
+        <div>
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Similar Cells</div>
+          ${similar.map(s => `<div style="font-size:11px;padding:3px 0;display:flex;justify-content:space-between;border-bottom:1px solid var(--border);color:var(--text)"><span>${s.name}</span><span style="color:var(--muted)">${s.lst.toFixed(1)}° / ${s.ndvi.toFixed(3)}</span></div>`).join('')}
+        </div>
+      ` : ''}
+      <button onclick="openInSimulator(${JSON.stringify(String(p.ward_id != null ? p.ward_id : (p.ward_name || '')))})" style="width:100%;margin-top:10px;padding:7px;background:var(--bg4);color:var(--accent);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;font-weight:500;transition:all .2s" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg4)'">&#9881; Open in Simulator</button>
+    </div>
+  `;
+}
+
+function openInSimulator(wardId) {
+  const sel = document.getElementById('sim-ward');
+  if (sel.querySelector(`option[value="${wardId}"]`)) {
+    sel.value = wardId;
+    switchSheetTab('simulate');
+    populateSimData();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1498,6 +1760,7 @@ function loadBookmark(idx) {
   isCustomArea = true;
   renderLayer();
   renderWardList();
+  populateWardSelect();
   showToast('Bookmark loaded', 'success');
 }
 
@@ -1558,7 +1821,192 @@ function hideStory() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  12. EVENT BINDING
+//  12. SIMULATE TAB
+// ═══════════════════════════════════════════════════════════════════════
+
+// Recalculate risk using the same formula as the backend
+function calcRiskFromLstNdvi(lst, ndvi) {
+  if (lst == null || isNaN(lst)) return null;
+  let score = (lst - 5) / 45;
+  if (ndvi != null && !isNaN(ndvi)) score = score * (1 - ndvi * 0.3);
+  return Math.max(0, Math.min(1, score));
+}
+
+function riskCat(score) {
+  if (score == null) return '—';
+  if (score > 0.66) return 'high';
+  if (score > 0.33) return 'medium';
+  return 'low';
+}
+
+function riskBadge(cat) {
+  const m = { high: '🔴 High', medium: '🟡 Medium', low: '🟢 Low', '—': '—' };
+  return m[cat] || cat;
+}
+
+function populateWardSelect() {
+  const sel = document.getElementById('sim-ward');
+  const data = cachedFeatures.heat;
+  if (!data || !data.features) {
+    sel.innerHTML = '<option value="">—</option>';
+    return;
+  }
+  // Build a stable id per feature: use ward_id if present, otherwise ward_name, otherwise index
+  const seen = new Set();
+  sel.innerHTML = '<option value="">— Select ward —</option>' +
+    data.features
+      .map((f, i) => {
+        const p = f.properties;
+        const id = p.ward_id != null ? p.ward_id : (p.ward_name || 'cell_' + i);
+        const name = String(p.ward_name || p.ward_id || 'Cell ' + i);
+        return { id: String(id), name };
+      })
+      .filter(v => { if (seen.has(v.id)) return false; seen.add(v.id); return true; })
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(f => `<option value="${f.id}">${f.name}</option>`)
+      .join('');
+  clearSimUI();
+}
+
+function clearSimUI() {
+  ['sim-new-lst','sim-new-ndvi','sim-new-risk'].forEach(id => {
+    document.getElementById(id).dataset.base = '';
+  });
+  ['sim-cur-lst','sim-cur-ndvi','sim-cur-risk','sim-new-lst','sim-new-ndvi','sim-new-risk','sim-reduction'].forEach(id => {
+    document.getElementById(id).textContent = '—';
+  });
+  ['sim-cur-bar','sim-new-bar'].forEach(id => document.getElementById(id).style.width = '0%');
+  document.getElementById('sim-recommend').textContent = 'Select a ward/cell to start simulation.';
+  ['sim-green','sim-roof','sim-traffic'].forEach(id => {
+    document.getElementById(id).value = 0;
+  });
+  document.getElementById('sim-val-green').textContent = '0%';
+  document.getElementById('sim-val-roof').textContent = '0%';
+  document.getElementById('sim-val-traffic').textContent = '0%';
+}
+
+function populateSimData() {
+  const sel = document.getElementById('sim-ward');
+  if (!sel.value) { clearSimUI(); return; }
+  const data = cachedFeatures.heat;
+  if (!data || !data.features || !data.features.length) return;
+  const feat = data.features.find(function(f) {
+    return String(f.properties.ward_id) === sel.value || f.properties.ward_name === sel.value;
+  });
+  if (!feat) return;
+  const p = feat.properties;
+  const lst = p.lst_mean;
+  const ndvi = p.ndvi_mean;
+
+  // Use formula-based risk for consistency with predicted values
+  let riskScore = calcRiskFromLstNdvi(lst, ndvi);
+  // Also check predictions for a potentially more accurate score
+  const preds = cachedFeatures.predictions;
+  if (preds && preds.features && preds.features.length) {
+    const rp = preds.features.find(function(rf) { return String(rf.properties.ward_id) === sel.value; });
+    if (rp && rp.properties.risk_score != null) riskScore = rp.properties.risk_score;
+  }
+  const cat = riskCat(riskScore);
+
+  document.getElementById('sim-cur-lst').textContent = lst != null ? lst.toFixed(2) + '°C' : '—';
+  document.getElementById('sim-cur-ndvi').textContent = ndvi != null ? ndvi.toFixed(3) : '—';
+  document.getElementById('sim-cur-risk').textContent = riskScore != null ? (riskScore.toFixed(3) + ' — ' + riskBadge(cat)) : '—';
+
+  document.getElementById('sim-new-lst').dataset.base = lst;
+  document.getElementById('sim-new-ndvi').dataset.base = ndvi;
+  document.getElementById('sim-new-risk').dataset.base = riskScore;
+
+  document.getElementById('sim-green').value = 0;
+  document.getElementById('sim-roof').value = 0;
+  document.getElementById('sim-traffic').value = 0;
+  document.getElementById('sim-val-green').textContent = '0%';
+  document.getElementById('sim-val-roof').textContent = '0%';
+  document.getElementById('sim-val-traffic').textContent = '0%';
+
+  // Build initial bar chart
+  updateSimulation();
+}
+
+function updateSimulation() {
+  const elLst = document.getElementById('sim-new-lst');
+  const elNdvi = document.getElementById('sim-new-ndvi');
+  const elRisk = document.getElementById('sim-new-risk');
+  const elRed = document.getElementById('sim-reduction');
+  const elRec = document.getElementById('sim-recommend');
+
+  const baseLst = parseFloat(elLst.dataset.base);
+  const baseNdvi = parseFloat(elNdvi.dataset.base);
+  const baseRisk = parseFloat(elRisk.dataset.base);
+
+  if (isNaN(baseLst) || isNaN(baseNdvi)) {
+    elRec.textContent = 'Select a ward/cell to start simulation.';
+    return;
+  }
+
+  const greenPct = parseInt(document.getElementById('sim-green').value) / 100;
+  const roofPct = parseInt(document.getElementById('sim-roof').value) / 100;
+  const trafficPct = parseInt(document.getElementById('sim-traffic').value) / 100;
+
+  document.getElementById('sim-val-green').textContent = (greenPct * 100).toFixed(0) + '%';
+  document.getElementById('sim-val-roof').textContent = (roofPct * 100).toFixed(0) + '%';
+  document.getElementById('sim-val-traffic').textContent = (trafficPct * 100).toFixed(0) + '%';
+
+  // Model coefficients
+  const ndviBoost = greenPct * 0.5;
+  const lstDropFromGreen = greenPct * 6.0;
+  const lstDropFromRoof = roofPct * 3.0;
+  const lstDropFromTraffic = trafficPct * 2.0;
+
+  const newNdvi = Math.min(1, Math.max(0, baseNdvi + ndviBoost));
+  const newLst = Math.max(0, baseLst - lstDropFromGreen - lstDropFromRoof - lstDropFromTraffic);
+
+  const newScore = calcRiskFromLstNdvi(newLst, newNdvi);
+  const newCat = riskCat(newScore);
+  const lstDiff = baseLst - newLst;
+  const riskDiff = !isNaN(baseRisk) ? (baseRisk - newScore) : null;
+
+  // Compute a formula-based current risk for consistent comparison bar
+  const baseScore = calcRiskFromLstNdvi(baseLst, baseNdvi) || 0;
+
+  // Update result values
+  elLst.textContent = newLst.toFixed(2) + '°C';
+  elNdvi.textContent = newNdvi.toFixed(3);
+  elRisk.textContent = newScore.toFixed(3) + ' — ' + riskBadge(newCat);
+
+  // LST reduction
+  if (lstDiff > 0.01) {
+    elRed.textContent = '−' + lstDiff.toFixed(2) + '°C ↓';
+    elRed.style.color = 'var(--success)';
+  } else {
+    elRed.textContent = '0.00°C';
+    elRed.style.color = 'var(--muted)';
+  }
+
+  // Risk bar: current vs predicted
+  document.getElementById('sim-cur-bar').style.width = (baseScore * 100).toFixed(1) + '%';
+  document.getElementById('sim-cur-bar').style.background = baseScore > 0.66 ? 'var(--accent2)' : baseScore > 0.33 ? 'var(--accent)' : 'var(--success)';
+  document.getElementById('sim-new-bar').style.width = (newScore * 100).toFixed(1) + '%';
+  document.getElementById('sim-new-bar').style.background = newScore > 0.66 ? 'var(--accent2)' : newScore > 0.33 ? 'var(--accent)' : 'var(--success)';
+
+  // Recommendation
+  if (greenPct === 0 && roofPct === 0 && trafficPct === 0) {
+    elRec.textContent = 'Adjust the sliders above to see the predicted effect of urban cooling interventions.';
+  } else {
+    const actions = [];
+    if (greenPct > 0) actions.push('+' + (greenPct * 100).toFixed(0) + '% green cover');
+    if (roofPct > 0) actions.push('+' + (roofPct * 100).toFixed(0) + '% cool roofs');
+    if (trafficPct > 0) actions.push('−' + (trafficPct * 100).toFixed(0) + '% traffic');
+    let rec = 'Applying ' + actions.join(', ') + ' could reduce LST by ~' + lstDiff.toFixed(1) + '°C';
+    if (riskDiff != null && riskDiff > 0.005) {
+      rec += ' and lower risk score by ' + (riskDiff * 100).toFixed(0) + ' points.';
+      rec += riskDiff > 0.1 ? ' Significant improvement expected.' : ' Moderate improvement expected.';
+    }
+    elRec.textContent = rec;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  13. EVENT BINDING
 // ═══════════════════════════════════════════════════════════════════════
 
 function initEvents() {
@@ -1618,10 +2066,48 @@ function initEvents() {
   document.getElementById('grid-slider').addEventListener('input', onGridChange);
   document.getElementById('ws').addEventListener('input', renderWardList);
 
+  // Simulate
+  document.getElementById('sim-ward').addEventListener('change', populateSimData);
+  ['sim-green','sim-roof','sim-traffic'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateSimulation);
+  });
+  document.getElementById('sim-reset').addEventListener('click', function() {
+    const sel = document.getElementById('sim-ward');
+    if (sel.value) populateSimData();
+  });
+
   // Export
   document.getElementById('export-geojson').addEventListener('click', () => doExport('geojson'));
   document.getElementById('export-csv').addEventListener('click', () => doExport('csv'));
   document.getElementById('save-bookmark').addEventListener('click', saveBookmark);
+
+  // Ripple effect on all .top-btn clicks
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.top-btn');
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    const size = Math.max(rect.width, rect.height);
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+    ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+    btn.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove());
+  });
+
+  // Typewriter effect for insight card
+  let typewriterTimer = null;
+  window.typewriter = function(el, text, speed = 25) {
+    clearInterval(typewriterTimer);
+    el.textContent = '';
+    let i = 0;
+    typewriterTimer = setInterval(() => {
+      el.textContent += text[i];
+      i++;
+      if (i >= text.length) clearInterval(typewriterTimer);
+    }, speed);
+  };
 
   // Keyboard shortcuts
   document.addEventListener('keydown', e => {
@@ -1647,14 +2133,14 @@ function initEvents() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  13. INIT
+//  14. INIT
 // ═══════════════════════════════════════════════════════════════════════
 
 // initGlobe() will be called after splash dismissal to avoid initial lag
 initEvents();
 
 // Auto-dismiss splash after 3.5s
-setTimeout(() => { if (!splashResolved) dismissSplash(); }, 3500);
+setTimeout(() => { if (!splashResolved) dismissSplash(); }, 5500);
 
 // After splash, enable draw mode and load cities
 setTimeout(() => {
