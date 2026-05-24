@@ -138,7 +138,7 @@ body.globe-loaded #globe-canvas{
 }
 
 /* ─── TOP BAR ─── */
-#top-bar{position:fixed;top:0;left:0;right:0;z-index:1000;padding:10px 16px;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,rgba(8,11,18,.97) 60%,transparent);transition:transform .5s cubic-bezier(.16,1,.3,1);transform:translateY(-100%)}
+#top-bar{position:fixed;top:0;left:0;right:0;z-index:1000;padding:10px 16px;display:flex;align-items:center;gap:10px;background:var(--bg2);border-bottom:1px solid var(--border);box-shadow:0 2px 20px rgba(0,0,0,.4);transition:transform .5s cubic-bezier(.16,1,.3,1);transform:translateY(-100%)}
 body.dashboard-loaded #top-bar{transform:translateY(0)}
 body.dashboard-loaded #top-bar>*{animation:slideDown .4s ease both}
 body.dashboard-loaded #top-bar>:nth-child(1){animation-delay:100ms}
@@ -455,6 +455,7 @@ body.dashboard-loaded #top-bar>:nth-child(4){animation-delay:280ms}
       <button class="st" data-tab="compare">Compare</button>
       <button class="st" data-tab="export">Export</button>
       <button class="st" data-tab="simulate">Simulate</button>
+      <button class="st" data-tab="time">Time</button>
     </div>
     <div id="sheet-content">
       <!-- Stats Tab -->
@@ -588,6 +589,28 @@ body.dashboard-loaded #top-bar>:nth-child(4){animation-delay:280ms}
           <div id="sim-recommend" style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.5;padding-top:8px;border-top:1px solid var(--border)">Adjust the sliders above to see the predicted effect of urban cooling interventions.</div>
           <button id="sim-reset" style="width:100%;margin-top:10px;padding:6px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--text)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">Reset Simulation</button>
         </div>
+      </div>
+
+      <!-- Time Tab -->
+      <div class="sc-tab" id="tab-time">
+        <div id="time-legend" style="margin-bottom:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);text-align:center">
+          <div id="time-season" style="font-size:20px;margin-bottom:4px" title="Season">🌿</div>
+          <div id="time-month" style="font-size:13px;font-weight:600;color:var(--text)">Current</div>
+          <div id="time-offset" style="font-size:10px;color:var(--muted);margin-top:2px">Baseline</div>
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px">
+            <span>Jan</span>
+            <span style="text-align:center;flex:1" id="time-temp-label">+0.0°C</span>
+            <span>Dec</span>
+          </div>
+          <input type="range" id="time-slider" min="0" max="11" value="0" step="1" style="width:100%;accent-color:var(--accent);height:4px;cursor:pointer">
+          <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:2px">
+            <span style="flex:1">← Cooler</span>
+            <span style="flex:1;text-align:right">Warmer →</span>
+          </div>
+        </div>
+        <button id="time-reset" style="width:100%;padding:7px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--text)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">Reset to Baseline</button>
       </div>
     </div>
   </div>
@@ -1012,6 +1035,7 @@ async function loadMapData() {
     api(`/api/equity?city=${encodeURIComponent(currentCity)}`),
   ]);
   cachedFeatures = { wards, heat, predictions, equity };
+  resetTime();
   renderLayer();
   renderWardList();
   populateWardSelect();
@@ -1144,10 +1168,11 @@ function renderLayer() {
     fitBounds(data);
   } else if (currentLayer === 'risk') {
     const pred = cachedFeatures.predictions;
-    if (pred && pred.features) {
-      geoLayer = L.geoJSON(pred, {
+    const riskSource = (pred && pred.features) ? pred : data;
+    if (riskSource && riskSource.features) {
+      geoLayer = L.geoJSON(riskSource, {
         style: f => {
-          const cat = f.properties.risk_category;
+          const cat = f.properties.risk_category || getRiskCatFromProps(f.properties);
           const colors = { high: '#e94560', medium: '#f0883e', low: '#22c55e' };
           return { fillColor: colors[cat] || '#888', weight: 0.5, color: 'rgba(255,255,255,0.15)', fillOpacity: 0.7 };
         },
@@ -1159,7 +1184,7 @@ function renderLayer() {
           });
         }
       }).addTo(map);
-      fitBounds(pred);
+      fitBounds(riskSource);
     }
   } else if (currentLayer === 'hotspot') {
     const thresholdLST = minLST + range * 0.7;
@@ -1404,7 +1429,10 @@ async function onDrawCreated(e) {
     const data = await res.json();
     if (!data || !data.features) { showToast('Analysis returned no data', 'error'); return; }
     cachedFeatures.heat = data;
+    cachedFeatures.predictions = null;
     isCustomArea = true;
+    resetTime();
+    updateStatsCards();
     document.getElementById('panel-title').textContent = 'Custom Area';
     document.getElementById('panel-hint').textContent = data.stats?.source || 'Analyzed';
     renderLayer();
@@ -1610,7 +1638,7 @@ function showCellAnalysis(f) {
           ${similar.map(s => `<div style="font-size:11px;padding:3px 0;display:flex;justify-content:space-between;border-bottom:1px solid var(--border);color:var(--text)"><span>${s.name}</span><span style="color:var(--muted)">${s.lst.toFixed(1)}° / ${s.ndvi.toFixed(3)}</span></div>`).join('')}
         </div>
       ` : ''}
-      <button onclick="openInSimulator(${JSON.stringify(String(p.ward_id != null ? p.ward_id : (p.ward_name || '')))})" style="width:100%;margin-top:10px;padding:7px;background:var(--bg4);color:var(--accent);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;font-weight:500;transition:all .2s" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg4)'">&#9881; Open in Simulator</button>
+      <button onclick='openInSimulator(${JSON.stringify(String(p.ward_id != null ? p.ward_id : (p.ward_name || "")))})' style="width:100%;margin-top:10px;padding:7px;background:var(--bg4);color:var(--accent);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;font-weight:500;transition:all .2s" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg4)'">&#9881; Open in Simulator</button>
     </div>
   `;
 }
@@ -1757,10 +1785,13 @@ function loadBookmark(idx) {
   const bm = JSON.parse(localStorage.getItem('hv_bookmarks') || '[]');
   if (!bm[idx]) return;
   cachedFeatures.heat = bm[idx].data;
+  cachedFeatures.predictions = null;
   isCustomArea = true;
+  resetTime();
   renderLayer();
   renderWardList();
   populateWardSelect();
+  updateStatsCards();
   showToast('Bookmark loaded', 'success');
 }
 
@@ -2006,7 +2037,123 @@ function updateSimulation() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  13. EVENT BINDING
+//  13. TIME MACHINE
+// ═══════════════════════════════════════════════════════════════════════
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const SEASON_ICONS = ['❄️','❄️','🌸','🌸','🌿','☀️','☀️','☀️','🌿','🍂','🍂','❄️'];
+// Seasonal LST offsets (°C) by month index 0-11
+const LST_OFFSETS = [-6, -4.5, -1.5, 1.5, 3.5, 5, 5.5, 4.5, 2.5, 0, -2, -4.5];
+
+let timeMonth = 0;
+
+function getRiskCatFromProps(p) {
+  if (p.risk_category) return p.risk_category;
+  var s = calcRiskFromLstNdvi(p.lst_mean, p.ndvi_mean);
+  return s != null ? (s > 0.66 ? 'high' : s > 0.33 ? 'medium' : 'low') : null;
+}
+
+function computeStatsFromFeatures(features) {
+  var lsts = [], ndvis = [], high = 0, med = 0, low = 0;
+  features.forEach(function(f) {
+    var p = f.properties;
+    if (p.lst_mean != null) lsts.push(p.lst_mean);
+    if (p.ndvi_mean != null) ndvis.push(p.ndvi_mean);
+    var cat = getRiskCatFromProps(p);
+    if (cat === 'high') high++;
+    else if (cat === 'medium') med++;
+    else if (cat === 'low') low++;
+  });
+  var total = high + med + low;
+  return {
+    avgLst: lsts.length ? lsts.reduce(function(a,b) { return a + b; }, 0) / lsts.length : 0,
+    avgNdvi: ndvis.length ? ndvis.reduce(function(a,b) { return a + b; }, 0) / ndvis.length : 0,
+    high: high, med: med, low: low, total: total
+  };
+}
+
+function updateStatsCards() {
+  var data = cachedFeatures.heat;
+  if (!data || !data.features || !data.features.length) return;
+  var stats = computeStatsFromFeatures(data.features);
+  document.getElementById('s-wards').textContent = stats.total;
+  document.getElementById('s-lst').textContent = stats.avgLst.toFixed(1) + '°';
+  document.getElementById('s-ndvi').textContent = stats.avgNdvi.toFixed(3);
+  document.getElementById('s-high').textContent = stats.high;
+  document.getElementById('dh').textContent = stats.high;
+  document.getElementById('dm').textContent = stats.med;
+  document.getElementById('dl').textContent = stats.low;
+  document.querySelector('#risk-bar .seg.h').style.width = stats.total ? (stats.high / stats.total * 100) + '%' : '0%';
+  document.querySelector('#risk-bar .seg.m').style.width = stats.total ? (stats.med / stats.total * 100) + '%' : '0%';
+  document.querySelector('#risk-bar .seg.l').style.width = stats.total ? (stats.low / stats.total * 100) + '%' : '0%';
+  drawDonut(stats.high, stats.med, stats.low);
+}
+
+function setTimeLabels() {
+  var offset = LST_OFFSETS[timeMonth];
+  document.getElementById('time-season').textContent = SEASON_ICONS[timeMonth];
+  document.getElementById('time-month').textContent = timeMonth === 0 ? 'Baseline (Current)' : MONTHS[timeMonth];
+  document.getElementById('time-offset').textContent = offset === 0 ? 'No adjustment' : (offset > 0 ? '+' : '') + offset.toFixed(1) + '°C offset';
+  document.getElementById('time-temp-label').textContent = offset === 0 ? 'Baseline' : (offset > 0 ? '+' : '') + offset.toFixed(1) + '°C';
+}
+
+function applyTimeOffset() {
+  var offset = LST_OFFSETS[timeMonth];
+  setTimeLabels();
+
+  var data = cachedFeatures.heat;
+  if (!data || !data.features || !data.features.length) return;
+
+  // Store originals on first call (deep clone values, not references)
+  if (!data._origLst) {
+    data._origLst = data.features.map(function(f) { return f.properties.lst_mean; });
+    data._origScore = data.features.map(function(f) { return f.properties.risk_score; });
+    data._origCat = data.features.map(function(f) { return f.properties.risk_category; });
+  }
+
+  for (var i = 0; i < data.features.length; i++) {
+    var p = data.features[i].properties;
+    var base = data._origLst[i];
+
+    p.lst_mean = base != null ? base + offset : null;
+    p.risk_score = calcRiskFromLstNdvi(p.lst_mean, p.ndvi_mean);
+    var s = p.risk_score;
+    p.risk_category = s != null ? (s > 0.66 ? 'high' : s > 0.33 ? 'medium' : 'low') : null;
+  }
+
+  renderLayer();
+  renderWardList();
+  updateStatsCards();
+  renderFullInsight();
+}
+
+function resetTime() {
+  document.getElementById('time-slider').value = 0;
+  timeMonth = 0;
+  setTimeLabels();
+
+  var data = cachedFeatures.heat;
+  if (data && data._origLst) {
+    for (var i = 0; i < data.features.length; i++) {
+      var p = data.features[i].properties;
+      p.lst_mean = data._origLst[i];
+      p.risk_score = data._origScore[i];
+      p.risk_category = data._origCat[i];
+    }
+    data._origLst = null;
+    data._origScore = null;
+    data._origCat = null;
+  }
+  if (data && data.features && data.features.length) {
+    renderLayer();
+    renderWardList();
+    updateStatsCards();
+    renderFullInsight();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  14. EVENT BINDING
 // ═══════════════════════════════════════════════════════════════════════
 
 function initEvents() {
@@ -2075,6 +2222,13 @@ function initEvents() {
     const sel = document.getElementById('sim-ward');
     if (sel.value) populateSimData();
   });
+
+  // Time Machine
+  document.getElementById('time-slider').addEventListener('input', function() {
+    timeMonth = parseInt(this.value);
+    applyTimeOffset();
+  });
+  document.getElementById('time-reset').addEventListener('click', resetTime);
 
   // Export
   document.getElementById('export-geojson').addEventListener('click', () => doExport('geojson'));
