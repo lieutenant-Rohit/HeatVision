@@ -14,7 +14,7 @@ pydantic-settings==2.7.0
 
 # Geospatial
 geopandas==1.0.1
-rasterio==1.4.3
+rasterio==1.4.4
 shapely==2.0.6
 folium==0.19.4
 

@@ -1,0 +1,29 @@
+app = "heatmapper"
+
+primary_region = "bom"
+
+[build]
+
+[env]
+  DB_HOST = ""
+  DB_PORT = "5432"
+  DB_USER = ""
+  DB_PASSWORD = ""
+  DB_NAME = "heatmapper"
+  REDIS_HOST = ""
+  REDIS_PORT = "6379"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "get"
+    path = "/api/health"
+    protocol = "http"
