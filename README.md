@@ -2,7 +2,9 @@
 
 A full-stack geospatial web application that maps Land Surface Temperature (LST) and vegetation health (NDVI) across cities, identifies Urban Heat Island (UHI) hotspots, and predicts heat-risk zones using a Random Forest model. Features a dark-themed Leaflet dashboard with draw-analyze capabilities, real-time weather fetching for any Earth location, and environmental justice analysis.
 
-![Tech Stack](https://img.shields.io/badge/FastAPI-009688?logo=fastapi) ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql) ![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis) ![Leaflet](https://img.shields.io/badge/Leaflet-199900?logo=leaflet)
+![Tech Stack](https://img.shields.io/badge/FastAPI-009688?logo=fastapi) ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql) ![Leaflet](https://img.shields.io/badge/Leaflet-199900?logo=leaflet)
+
+**Live demo:** https://heatmapper-jt16.onrender.com
 
 ## Features
 
@@ -15,7 +17,6 @@ A full-stack geospatial web application that maps Land Surface Temperature (LST)
 - **Equity Analysis** — Correlates heat with socio-economic factors (income, green cover, population density)
 - **Keyboard Shortcuts** — `1` heat · `2` risk · `3` hotspots · `D` draw · `S` search · `F` fullscreen · `E` toggle panel · `?` shortcuts
 - **Global Mode** — Uses free Open-Meteo API for any location on Earth
-- **Nightly Refresh Pipeline** — Celery Beat triggers automated data refresh at 2 AM
 
 **Supported cities:** Bangalore · Mumbai · Delhi · Chennai · Kolkata (seeded with synthetic data on startup, no external download needed)
 
@@ -23,23 +24,23 @@ A full-stack geospatial web application that maps Land Surface Temperature (LST)
 
 | Layer | Technology |
 |---|---|
-| Backend | Python 3.11+, FastAPI, Uvicorn |
+| Backend | Python 3.12, FastAPI, Uvicorn |
 | Database | PostgreSQL + asyncpg via SQLAlchemy 2.0 (async) |
 | Geospatial | GeoPandas, Shapely, Rasterio, SciPy |
 | ML | scikit-learn (RandomForestRegressor), NumPy, Pandas |
 | Frontend | Vanilla JS, Leaflet.js, Leaflet.draw, Three.js |
-| Task Queue | Celery + Redis |
+| Task Queue | Celery + Redis (optional) |
 | HTTP Client | httpx |
 
 ## Getting Started
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.12
 - PostgreSQL 14+
 - Redis 6+ (optional, only for Celery pipeline)
 
-### Setup
+### Local Setup
 
 ```bash
 git clone <repo-url> HeatMapper
@@ -73,12 +74,46 @@ uvicorn main:app --reload --port 8000
 
 Open http://localhost:8000. The app auto-creates tables and seeds 5 cities with mock data on first startup.
 
+### Docker (local)
+
+```bash
+docker compose up -d
+```
+
+Open http://localhost:8000.
+
 ### Celery (optional)
 
 ```bash
 redis-server                                    # Terminal 1
 celery -A app.celery_app worker --beat --loglevel=info   # Terminal 2
 ```
+
+## Deploy to Render (free)
+
+1. Push to GitHub
+2. Go to https://dashboard.render.com → New Web Service → Connect repo
+3. Fill:
+
+| Field | Value |
+|---|---|
+| Name | `heatmapper` |
+| Runtime | **Python 3** |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `uvicorn main:app --host 0.0.0.0 --port \$PORT` |
+| Plan | **Free** |
+
+4. Add PostgreSQL (New → PostgreSQL → Free plan)
+5. Set environment variables in web service:
+
+```
+DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME (from Postgres)
+PYTHONUNBUFFERED=1
+```
+
+6. Deploy
+
+**Note:** Free tier sleeps after 15 min idle; wakes on first request (~30s). PostgreSQL expires after 90 days.
 
 ## API Endpoints
 
@@ -102,6 +137,9 @@ celery -A app.celery_app worker --beat --loglevel=info   # Terminal 2
 ```
 HeatMapper/
 ├── main.py                     # FastAPI entry point
+├── Dockerfile                  # Docker image
+├── docker-compose.yml          # Local dev with DB + Redis
+├── .python-version             # Python version (3.12)
 ├── requirements.txt
 ├── .env
 ├── app/
@@ -129,7 +167,7 @@ HeatMapper/
 │   │   └── refresh.py          # Celery tasks: ingest → train → refresh
 │   └── frontend/
 │       └── index.html          # Single-page Leaflet dashboard (~2300 lines)
-├── scripts/                    # CLI tools
+├── scripts/
 │   ├── ingest_raster.py
 │   ├── run_analysis.py
 │   ├── run_equity.py
@@ -137,7 +175,7 @@ HeatMapper/
 ├── data/
 │   ├── sample/                 # Pre-generated sample rasters & GeoJSON
 │   └── models/                 # Saved ML models
-└── dump.rdb                    # Redis persistence
+└── fly.toml                    # Fly.io deployment config
 ```
 
 ## CLI Scripts
